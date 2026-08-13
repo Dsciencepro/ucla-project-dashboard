@@ -57,8 +57,8 @@ export default function LoginPage({ onLogin }) {
             background: `linear-gradient(135deg, ${C.accent}, ${C.navyLight})`,
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 16px", fontSize: 24, color: "#fff", fontWeight: 700,
-          }}>PF</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.navy }}>Project Financial Dashboard</div>
+          }}>UCLA</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.navy }}>UCLA Project Financial Dashboard</div>
           <div style={{ fontSize: 13, color: C.slate, marginTop: 4 }}>Sign in to continue</div>
         </div>
 

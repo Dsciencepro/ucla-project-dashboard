@@ -392,10 +392,10 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 14, fontWeight: 800, color: "#fff",
-          }}>PF</div>
+          }}>UCLA</div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: -0.3 }}>
-              Project Financial Dashboard
+              UCLA Project Financial Dashboard
             </div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>
               {PROJECTS.length} Active Projects · {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
