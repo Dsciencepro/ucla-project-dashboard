@@ -1,9 +1,10 @@
-[variables]
-CI = "false"
-DISABLE_ESLINT_PLUGIN = "true"
+providers = []
 
-[phases.build]
-cmds = ["npm install", "npm run build"]
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm install --production"]
 
 [start]
 cmd = "node server.js"
