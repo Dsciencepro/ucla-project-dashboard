@@ -505,24 +505,77 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
               </ResponsiveContainer>
             </div>
 
-            {/* Top 10 Horizontal Bar */}
+            {/* Top 10 — Custom Horizontal Chart */}
             <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Top 10 by Contract Value</div>
-              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Invoiced vs remaining balance</div>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={top10.map(p => ({
-                  name: p.projectName.length > 18 ? p.projectName.slice(0, 16) + "…" : p.projectName,
-                  invoiced: p.amountInvoiced,
-                  remaining: p.remainingAfterDraft,
-                }))} layout="vertical" margin={{ left: 5, right: 20 }}>
-                  <XAxis type="number" tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="name" width={115} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="invoiced" stackId="a" fill={C.accent} name="Invoiced" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="remaining" stackId="a" fill="#E2E8F0" name="Remaining" radius={[0, 4, 4, 0]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 20 }}>Invoiced vs remaining · sorted by total contract</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {top10.map((p, i) => {
+                  const maxVal = top10[0].revisedContract;
+                  const totalWidth = (p.revisedContract / maxVal) * 100;
+                  const invoicedWidth = (p.amountInvoiced / maxVal) * 100;
+                  const utilPct = p.utilizationPct;
+                  const barColor = utilPct > 90 ? C.red : utilPct > 70 ? C.amber : C.accent;
+                  return (
+                    <div key={p.projectNumber} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: 6,
+                        background: `${barColor}18`, color: barColor,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 10, fontWeight: 800, flexShrink: 0,
+                      }}>{i + 1}</div>
+                      <div style={{ width: 130, flexShrink: 0, overflow: "hidden" }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: C.navy, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {p.projectName}
+                        </div>
+                        <div style={{ fontSize: 9, color: C.slateLt }}>{p.billingMethod}</div>
+                      </div>
+                      <div style={{ flex: 1, position: "relative", height: 26 }}>
+                        {/* Total bar (ghost) */}
+                        <div style={{
+                          position: "absolute", top: 3, left: 0, height: 20,
+                          width: `${totalWidth}%`, background: "#F1F5F9",
+                          borderRadius: 10,
+                        }} />
+                        {/* Invoiced bar (filled) */}
+                        <div style={{
+                          position: "absolute", top: 3, left: 0, height: 20,
+                          width: `${invoicedWidth}%`,
+                          background: `linear-gradient(90deg, ${barColor}DD, ${barColor})`,
+                          borderRadius: 10, transition: "width .5s ease",
+                          boxShadow: `0 2px 8px ${barColor}30`,
+                        }} />
+                        {/* Value label on the invoiced bar */}
+                        {invoicedWidth > 15 && (
+                          <div style={{
+                            position: "absolute", top: 5, left: `${Math.min(invoicedWidth - 1, totalWidth - 5)}%`,
+                            transform: "translateX(-100%)", paddingRight: 6,
+                            fontSize: 9, fontWeight: 700, color: "#fff",
+                            textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                          }}>{fmtCurrency(p.amountInvoiced)}</div>
+                        )}
+                      </div>
+                      <div style={{ width: 58, textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: C.navy }}>{fmtCurrency(p.revisedContract)}</div>
+                        <div style={{ fontSize: 9, color: barColor, fontWeight: 600 }}>{fmtPct(utilPct)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 14, paddingTop: 10, borderTop: `1px solid ${C.borderLt}`, justifyContent: "center" }}>
+                {[
+                  { color: C.accent, label: "Invoiced (healthy)" },
+                  { color: C.amber, label: "Invoiced (>70% util)" },
+                  { color: C.red, label: "Invoiced (>90% util)" },
+                  { color: "#F1F5F9", label: "Remaining", border: true },
+                ].map((l, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: C.slate }}>
+                    <div style={{ width: 18, height: 4, borderRadius: 2, background: l.color, border: l.border ? `1px solid ${C.border}` : "none" }} />
+                    {l.label}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Billing Method */}
