@@ -1,5 +1,9 @@
+[variables]
+CI = "false"
+DISABLE_ESLINT_PLUGIN = "true"
+
 [phases.build]
-cmds = ["npm install"]
+cmds = ["npm install", "npm run build"]
 
 [start]
 cmd = "node server.js"

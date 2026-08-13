@@ -4,7 +4,6 @@ import ProjectFinancialDashboard from "./ProjectFinancialDashboard";
 
 function App() {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [checking, setChecking] = useState(true);
 
   // Check for existing session on mount
@@ -21,7 +20,6 @@ function App() {
         })
         .then((data) => {
           setUser(data.user);
-          setToken(savedToken);
         })
         .catch(() => {
           localStorage.removeItem("token");
@@ -33,16 +31,14 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (userData, tokenData) => {
+  const handleLogin = (userData) => {
     setUser(userData);
-    setToken(tokenData);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
-    setToken(null);
   };
 
   if (checking) {
