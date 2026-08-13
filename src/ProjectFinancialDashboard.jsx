@@ -162,7 +162,7 @@ function SortHeader({ label, field, sortKey, sortDir, onSort, align }) {
 }
 
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
-export default function ProjectFinancialDashboard() {
+export default function ProjectFinancialDashboard({ user, onLogout }) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterBilling, setFilterBilling] = useState("All");
@@ -243,8 +243,28 @@ export default function ProjectFinancialDashboard() {
             Contract &amp; Billing Tracker · {PROJECTS.length} Active Projects
           </div>
         </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-          Sample data · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{user?.name || "User"}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>{user?.role || "Viewer"}</div>
+          </div>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            background: "rgba(255,255,255,0.15)", display: "flex",
+            alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 700, color: "#fff",
+          }}>{(user?.name || "U").split(" ").map(n => n[0]).join("")}</div>
+          {onLogout && (
+            <button onClick={onLogout} style={{
+              padding: "6px 14px", fontSize: 11, fontWeight: 600,
+              background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)",
+              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6,
+              cursor: "pointer", transition: "background .2s",
+            }}
+              onMouseEnter={e => e.target.style.background = "rgba(255,255,255,0.25)"}
+              onMouseLeave={e => e.target.style.background = "rgba(255,255,255,0.12)"}
+            >Sign Out</button>
+          )}
         </div>
       </div>
 
