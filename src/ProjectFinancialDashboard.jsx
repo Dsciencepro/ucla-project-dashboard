@@ -577,7 +577,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                 <PieChart>
                   <Pie data={statusCounts} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95}
                     innerRadius={55} paddingAngle={4} cornerRadius={4}
-                    label={({ name, value }) => `${value}`}
+                    label={({ name, value, percent }) => `${(percent * 100).toFixed(0)}%`}
                     style={{ fontSize: 12, fontWeight: 700 }}>
                     {statusCounts.map((e, i) => <Cell key={i} fill={e.fill} stroke="none" />)}
                   </Pie>
