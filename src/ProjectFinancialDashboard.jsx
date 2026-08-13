@@ -53,13 +53,57 @@ function generateProjects(n = 24) {
 
 const PROJECTS = generateProjects(24);
 
-// ─── Monthly trend data (simulated 6 months) ───────────────────────────────
-const MONTHS = ["Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-const monthlyTrend = MONTHS.map((m, i) => ({
-  month: m,
-  invoiced: Math.round(1800000 + i * 320000 + (i === 3 ? -200000 : 0) + (i === 5 ? 150000 : 0)),
-  budget: Math.round(2000000 + i * 280000),
-}));
+// ─── Date periods & monthly invoice data per project ────────────────────────
+const PERIOD_OPTIONS = [
+  { key: "all", label: "All Time" },
+  { key: "q1", label: "Q1 2026 (Jan–Mar)" },
+  { key: "q2", label: "Q2 2026 (Apr–Jun)" },
+  { key: "q3", label: "Q3 2026 (Jul–Aug)" },
+  { key: "last3", label: "Last 3 Months" },
+  { key: "last6", label: "Last 6 Months" },
+];
+
+const ALL_MONTHS = [
+  { key: "2026-01", label: "Jan 2026", short: "Jan", q: "q1" },
+  { key: "2026-02", label: "Feb 2026", short: "Feb", q: "q1" },
+  { key: "2026-03", label: "Mar 2026", short: "Mar", q: "q1" },
+  { key: "2026-04", label: "Apr 2026", short: "Apr", q: "q2" },
+  { key: "2026-05", label: "May 2026", short: "May", q: "q2" },
+  { key: "2026-06", label: "Jun 2026", short: "Jun", q: "q2" },
+  { key: "2026-07", label: "Jul 2026", short: "Jul", q: "q3" },
+  { key: "2026-08", label: "Aug 2026", short: "Aug", q: "q3" },
+];
+
+// Generate monthly invoice amounts per project (sums to amountInvoiced)
+const rand2 = seededRandom(99);
+const projectMonthlyData = PROJECTS.map(p => {
+  const weights = ALL_MONTHS.map(() => 0.3 + rand2() * 0.7);
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  return ALL_MONTHS.map((m, i) => ({
+    month: m.key, label: m.short, q: m.q,
+    projectNumber: p.projectNumber,
+    billingMethod: p.billingMethod,
+    invoiced: Math.round((weights[i] / totalW) * p.amountInvoiced),
+    budget: Math.round((1 / ALL_MONTHS.length) * p.revisedContract),
+  }));
+}).flat();
+
+function filterMonths(period) {
+  if (period === "all") return ALL_MONTHS;
+  if (period === "last3") return ALL_MONTHS.slice(-3);
+  if (period === "last6") return ALL_MONTHS.slice(-6);
+  return ALL_MONTHS.filter(m => m.q === period);
+}
+
+// ─── Monthly trend data (simulated 8 months) ───────────────────────────────
+const monthlyTrend = ALL_MONTHS.map((m) => {
+  const rows = projectMonthlyData.filter(r => r.month === m.key);
+  return {
+    month: m.short,
+    invoiced: rows.reduce((s, r) => s + r.invoiced, 0),
+    budget: rows.reduce((s, r) => s + r.budget, 0),
+  };
+});
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
 const fmtCurrency = (v) => {
@@ -240,11 +284,22 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
   const [sortKey, setSortKey] = useState("projectNumber");
   const [sortDir, setSortDir] = useState("asc");
   const [activeTab, setActiveTab] = useState("table");
+  const [period, setPeriod] = useState("all");
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
   };
+
+  // Period-filtered monthly data
+  const activeMonths = useMemo(() => filterMonths(period), [period]);
+  const activeMonthKeys = useMemo(() => new Set(activeMonths.map(m => m.key)), [activeMonths]);
+  const periodData = useMemo(() => projectMonthlyData.filter(r => activeMonthKeys.has(r.month)), [activeMonthKeys]);
+  const periodTrend = useMemo(() => activeMonths.map(m => {
+    const rows = projectMonthlyData.filter(r => r.month === m.key);
+    return { month: m.short, invoiced: rows.reduce((s, r) => s + r.invoiced, 0), budget: rows.reduce((s, r) => s + r.budget, 0) };
+  }), [activeMonths]);
+  const periodLabel = PERIOD_OPTIONS.find(p => p.key === period)?.label || "All Time";
 
   const filtered = useMemo(() => {
     let d = [...PROJECTS];
@@ -279,15 +334,26 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
   // Chart: top 10
   const top10 = [...PROJECTS].sort((a, b) => b.revisedContract - a.revisedContract).slice(0, 10);
 
-  // Chart: billing method
-  const billingData = BILLING_METHODS.map(bm => {
-    const projs = PROJECTS.filter(p => p.billingMethod === bm);
+  // Chart: billing method — period-aware with monthly breakdown
+  const billingData = useMemo(() => BILLING_METHODS.map(bm => {
+    const rows = periodData.filter(r => r.billingMethod === bm);
     return {
-      name: bm, count: projs.length,
-      contract: projs.reduce((s, p) => s + p.revisedContract, 0),
-      invoiced: projs.reduce((s, p) => s + p.amountInvoiced, 0),
+      name: bm,
+      count: PROJECTS.filter(p => p.billingMethod === bm).length,
+      invoiced: rows.reduce((s, r) => s + r.invoiced, 0),
+      budget: rows.reduce((s, r) => s + r.budget, 0),
     };
-  });
+  }), [periodData]);
+
+  // Billing method monthly trend (for the stacked area)
+  const billingMonthly = useMemo(() => activeMonths.map(m => {
+    const row = { month: m.short };
+    BILLING_METHODS.forEach(bm => {
+      row[bm] = projectMonthlyData.filter(r => r.month === m.key && r.billingMethod === bm)
+        .reduce((s, r) => s + r.invoiced, 0);
+    });
+    return row;
+  }), [activeMonths]);
 
   const COLS = [
     { key: "projectNumber", label: "Project #", align: "left" },
@@ -376,15 +442,30 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
             sub={`of ${PROJECTS.length} total`} />
         </div>
 
-        {/* ── Tab Bar ── */}
-        <div style={{
-          display: "flex", gap: 6, marginBottom: 20, background: C.surface,
-          padding: 4, borderRadius: 10, width: "fit-content",
-          border: `1px solid ${C.border}`,
-        }}>
-          <button onClick={() => setActiveTab("table")} style={tabStyle("table")}>📋 Detail Table</button>
-          <button onClick={() => setActiveTab("charts")} style={tabStyle("charts")}>📊 Analytics</button>
-          <button onClick={() => setActiveTab("trends")} style={tabStyle("trends")}>📈 Trends</button>
+        {/* ── Tab Bar + Period Filter ── */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+          <div style={{
+            display: "flex", gap: 6, background: C.surface,
+            padding: 4, borderRadius: 10, width: "fit-content",
+            border: `1px solid ${C.border}`,
+          }}>
+            <button onClick={() => setActiveTab("table")} style={tabStyle("table")}>📋 Detail Table</button>
+            <button onClick={() => setActiveTab("charts")} style={tabStyle("charts")}>📊 Analytics</button>
+            <button onClick={() => setActiveTab("trends")} style={tabStyle("trends")}>📈 Trends</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 11, color: C.slateLt, fontWeight: 600 }}>📅 Period:</span>
+            <div style={{ display: "flex", gap: 4, background: C.surface, padding: 3, borderRadius: 8, border: `1px solid ${C.border}` }}>
+              {PERIOD_OPTIONS.map(po => (
+                <button key={po.key} onClick={() => setPeriod(po.key)} style={{
+                  padding: "6px 12px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
+                  background: period === po.key ? C.navy : "transparent",
+                  color: period === po.key ? "#fff" : C.slate,
+                  borderRadius: 6, transition: "all .2s", whiteSpace: "nowrap",
+                }}>{po.label}</button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ═══ TABLE TAB ═══ */}
@@ -578,20 +659,62 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
               </div>
             </div>
 
-            {/* Billing Method */}
+            {/* Billing Method — Period-Aware */}
             <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}`, gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Billing Method Breakdown</div>
-              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Contract value vs amount invoiced by billing type</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Invoicing by Billing Method</div>
+                  <div style={{ fontSize: 12, color: C.slateLt }}>{periodLabel} · Monthly breakdown by billing type</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {billingData.map(b => {
+                    const pct = b.budget > 0 ? ((b.invoiced / b.budget) * 100) : 0;
+                    return (
+                      <div key={b.name} style={{
+                        padding: "10px 14px", borderRadius: 8, background: "#F8FAFC",
+                        border: `1px solid ${C.borderLt}`, minWidth: 110, textAlign: "center",
+                      }}>
+                        <div style={{ fontSize: 10, color: C.slateLt, fontWeight: 600, marginBottom: 4 }}>{b.name}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: C.navy }}>{fmtCurrency(b.invoiced)}</div>
+                        <div style={{ fontSize: 10, color: pct > 100 ? C.red : pct > 80 ? C.amber : C.green, fontWeight: 600, marginTop: 2 }}>
+                          {fmtPct(pct)} of budget
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={billingData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <AreaChart data={billingMonthly} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    {[
+                      { key: "T&M", color: C.accent },
+                      { key: "Lump Sum", color: C.green },
+                      { key: "Cost Plus", color: C.purple },
+                      { key: "Unit Price", color: C.amber },
+                    ].map(({ key, color }) => (
+                      <linearGradient key={key} id={`grad-${key.replace(/\s/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={C.borderLt} />
-                  <XAxis dataKey="name" style={{ fontSize: 11 }} axisLine={false} />
+                  <XAxis dataKey="month" style={{ fontSize: 11 }} axisLine={false} />
                   <YAxis tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} axisLine={false} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="contract" fill={C.navyLight} name="Current Contract" radius={[6, 6, 0, 0]} barSize={40} />
-                  <Bar dataKey="invoiced" fill={C.green} name="Amount Invoiced" radius={[6, 6, 0, 0]} barSize={40} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
-                </BarChart>
+                  {[
+                    { key: "T&M", color: C.accent },
+                    { key: "Lump Sum", color: C.green },
+                    { key: "Cost Plus", color: C.purple },
+                    { key: "Unit Price", color: C.amber },
+                  ].map(({ key, color }) => (
+                    <Area key={key} type="monotone" dataKey={key} stroke={color} strokeWidth={2}
+                      fill={`url(#grad-${key.replace(/\s/g, "")})`} name={key}
+                      dot={{ r: 3, fill: color, stroke: "#fff", strokeWidth: 1.5 }} />
+                  ))}
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={14} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -602,9 +725,9 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
             <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Monthly Invoicing vs Budget</div>
-              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 20 }}>6-month trend · Budget target vs actual invoiced</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 20 }}>{periodLabel} · Budget target vs actual invoiced</div>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={monthlyTrend} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                <AreaChart data={periodTrend} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={C.accent} stopOpacity={0.3} />
