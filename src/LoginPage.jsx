@@ -53,12 +53,14 @@ export default function LoginPage({ onLogin }) {
         {/* Logo / Title */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 14,
-            background: `linear-gradient(135deg, ${C.accent}, ${C.navyLight})`,
+            width: 72, height: 48, borderRadius: 10,
+            background: "#2774AE",
             display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px", fontSize: 24, color: "#fff", fontWeight: 700,
+            margin: "0 auto 18px", fontSize: 20, letterSpacing: 3,
+            color: "#FFD100", fontWeight: 800, fontFamily: "'Georgia', serif",
+            boxShadow: "0 4px 14px rgba(39,116,174,0.35)",
           }}>UCLA</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.navy }}>UCLA Project Financial Dashboard</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.navy }}>Project Financial Dashboard</div>
           <div style={{ fontSize: 13, color: C.slate, marginTop: 4 }}>Sign in to continue</div>
         </div>
 

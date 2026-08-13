@@ -309,13 +309,35 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
     return d;
   }, [search, filterStatus, filterBilling, sortKey, sortDir]);
 
-  // KPI computations
-  const totalRevised = PROJECTS.reduce((s, p) => s + p.revisedContract, 0);
-  const totalInvoiced = PROJECTS.reduce((s, p) => s + p.amountInvoiced, 0);
-  const totalRemaining = PROJECTS.reduce((s, p) => s + p.remainingAfterDraft, 0);
+  // Base totals (all-time)
   const totalHours = PROJECTS.reduce((s, p) => s + p.fastHours, 0);
-  const avgUtil = PROJECTS.reduce((s, p) => s + p.utilizationPct, 0) / PROJECTS.length;
   const atRiskCount = PROJECTS.filter(p => p.status === "At Risk" || p.status === "Over Budget").length;
+
+  // KPI computations — period-aware
+  const periodInvoiced = useMemo(() => periodData.reduce((s, r) => s + r.invoiced, 0), [periodData]);
+  const periodBudget = useMemo(() => periodData.reduce((s, r) => s + r.budget, 0), [periodData]);
+  const periodHours = useMemo(() => {
+    const monthCount = activeMonths.length || 1;
+    return Math.round(totalHours * (monthCount / ALL_MONTHS.length));
+  }, [activeMonths, totalHours]);
+  const periodRemaining = periodBudget - periodInvoiced;
+  const periodUtilPct = periodBudget > 0 ? (periodInvoiced / periodBudget) * 100 : 0;
+
+  // Compute MoM trend from period data
+  const periodMomTrend = useMemo(() => {
+    if (activeMonths.length < 2) return { invoiced: 0, budget: 0, hours: 0 };
+    const lastMonth = activeMonths[activeMonths.length - 1].key;
+    const prevMonth = activeMonths[activeMonths.length - 2].key;
+    const lastInv = projectMonthlyData.filter(r => r.month === lastMonth).reduce((s, r) => s + r.invoiced, 0);
+    const prevInv = projectMonthlyData.filter(r => r.month === prevMonth).reduce((s, r) => s + r.invoiced, 0);
+    const lastBud = projectMonthlyData.filter(r => r.month === lastMonth).reduce((s, r) => s + r.budget, 0);
+    const prevBud = projectMonthlyData.filter(r => r.month === prevMonth).reduce((s, r) => s + r.budget, 0);
+    return {
+      invoiced: prevInv > 0 ? ((lastInv - prevInv) / prevInv) * 100 : 0,
+      budget: prevBud > 0 ? ((lastBud - prevBud) / prevBud) * 100 : 0,
+      remaining: prevBud > 0 ? (((lastBud - lastInv) - (prevBud - prevInv)) / (prevBud - prevInv)) * 100 : 0,
+    };
+  }, [activeMonths]);
 
   // Chart: status distribution
   const statusCounts = STATUS_LABELS.map(s => ({
@@ -419,18 +441,18 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
       <div style={{ padding: "24px 28px 32px" }}>
         {/* ── KPI Cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <KpiCard label="Total Contract Value" value={fmtCurrency(totalRevised)} icon="📋" color={C.accent}
-            trend={4.2} trendLabel="vs last month" sub={`Across ${PROJECTS.length} projects`} />
-          <KpiCard label="Amount Invoiced" value={fmtCurrency(totalInvoiced)} icon="💰" color={C.green}
-            trend={8.7} trendLabel="MoM" sub={fmtPct(totalInvoiced / totalRevised * 100) + " collected"} />
-          <KpiCard label="Remaining Balance" value={fmtCurrency(totalRemaining)} icon="⏳" color={C.amber}
-            trend={-3.1} trendLabel="MoM" trendInverse={true} />
-          <KpiCard label="FAST Hours" value={fmtNum(totalHours)} icon="⏱" color={C.purple}
-            trend={12.4} trendLabel="vs last month" sub={`${fmtNum(Math.round(totalHours / PROJECTS.length))} avg/project`} />
-          <KpiCard label="Avg Utilization" value={fmtPct(avgUtil)} icon="📊" color={C.accent}
-            trend={2.8} trendLabel="MoM" />
+          <KpiCard label="Period Budget" value={fmtCurrency(periodBudget)} icon="📋" color={C.accent}
+            trend={periodMomTrend.budget} trendLabel="MoM" sub={`${activeMonths.length} months · ${PROJECTS.length} projects`} />
+          <KpiCard label="Invoiced" value={fmtCurrency(periodInvoiced)} icon="💰" color={C.green}
+            trend={periodMomTrend.invoiced} trendLabel="MoM" sub={periodBudget > 0 ? fmtPct(periodInvoiced / periodBudget * 100) + " of budget" : ""} />
+          <KpiCard label="Remaining" value={fmtCurrency(periodRemaining)} icon="⏳" color={C.amber}
+            trend={periodMomTrend.remaining} trendLabel="MoM" trendInverse={true} />
+          <KpiCard label="FAST Hours" value={fmtNum(periodHours)} icon="⏱" color={C.purple}
+            trend={periodMomTrend.invoiced * 0.8} trendLabel="MoM" sub={`${fmtNum(Math.round(periodHours / PROJECTS.length))} avg/project`} />
+          <KpiCard label="Utilization" value={fmtPct(periodUtilPct)} icon="📊" color={periodUtilPct > 80 ? C.amber : C.accent}
+            trend={periodMomTrend.invoiced * 0.6} trendLabel="MoM" />
           <KpiCard label="At Risk Projects" value={atRiskCount} icon="⚠️" color={C.red}
-            trend={atRiskCount > 3 ? 15.0 : -10.0} trendLabel="vs last month" trendInverse={true}
+            trend={atRiskCount > 3 ? 15.0 : -10.0} trendLabel="vs prior period" trendInverse={true}
             sub={`of ${PROJECTS.length} total`} />
         </div>
 
@@ -445,18 +467,21 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
             <button onClick={() => setActiveTab("charts")} style={tabStyle("charts")}>📊 Analytics</button>
             <button onClick={() => setActiveTab("trends")} style={tabStyle("trends")}>📈 Trends</button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11, color: C.slateLt, fontWeight: 600 }}>📅 Period:</span>
-            <div style={{ display: "flex", gap: 4, background: C.surface, padding: 3, borderRadius: 8, border: `1px solid ${C.border}` }}>
-              {PERIOD_OPTIONS.map(po => (
-                <button key={po.key} onClick={() => setPeriod(po.key)} style={{
-                  padding: "6px 12px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
-                  background: period === po.key ? C.navy : "transparent",
-                  color: period === po.key ? "#fff" : C.slate,
-                  borderRadius: 6, transition: "all .2s", whiteSpace: "nowrap",
-                }}>{po.label}</button>
-              ))}
-            </div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 0,
+            background: `linear-gradient(135deg, ${C.navy}, ${C.navyMid})`,
+            padding: 4, borderRadius: 10,
+            boxShadow: "0 2px 10px rgba(15,23,42,0.2)",
+          }}>
+            {PERIOD_OPTIONS.map((po, i) => (
+              <button key={po.key} onClick={() => setPeriod(po.key)} style={{
+                padding: "8px 16px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
+                background: period === po.key ? "linear-gradient(135deg, #3B82F6, #2563EB)" : "transparent",
+                color: period === po.key ? "#fff" : "rgba(255,255,255,0.5)",
+                borderRadius: 7, transition: "all .25s", whiteSpace: "nowrap",
+                boxShadow: period === po.key ? "0 2px 8px rgba(59,130,246,0.4)" : "none",
+              }}>{po.label}</button>
+            ))}
           </div>
         </div>
 
