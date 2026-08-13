@@ -120,37 +120,7 @@ export default function LoginPage({ onLogin }) {
           }}>{loading ? "Signing in…" : "Sign In"}</button>
         </form>
 
-        {/* Credentials hint */}
-        <div style={{
-          marginTop: 28, padding: "14px 16px", background: C.bg,
-          borderRadius: 8, fontSize: 11, color: C.slate,
-        }}>
-          <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 12, color: C.navy }}>Demo Credentials</div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Username", "Password", "Role"].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "2px 6px", fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["admin", "Admin@123", "Admin"],
-                ["jthompson", "James@123", "PM"],
-                ["schen", "Sarah@123", "Finance"],
-                ["mrodriguez", "Maria@123", "Director"],
-                ["viewer", "Viewer@123", "Viewer"],
-              ].map(([u, p, r]) => (
-                <tr key={u}>
-                  <td style={{ padding: "3px 6px", fontFamily: "monospace", fontSize: 11 }}>{u}</td>
-                  <td style={{ padding: "3px 6px", fontFamily: "monospace", fontSize: 11 }}>{p}</td>
-                  <td style={{ padding: "3px 6px" }}>{r}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
       </div>
     </div>
   );

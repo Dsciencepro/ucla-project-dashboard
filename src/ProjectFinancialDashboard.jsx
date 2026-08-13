@@ -500,7 +500,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                     style={{ fontSize: 12, fontWeight: 700 }}>
                     {statusCounts.map((e, i) => <Cell key={i} fill={e.fill} stroke="none" />)}
                   </Pie>
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -520,7 +520,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                   <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="invoiced" stackId="a" fill={C.accent} name="Invoiced" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="remaining" stackId="a" fill="#E2E8F0" name="Remaining" radius={[0, 4, 4, 0]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -537,7 +537,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                   <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="contract" fill={C.navyLight} name="Current Contract" radius={[6, 6, 0, 0]} barSize={40} />
                   <Bar dataKey="invoiced" fill={C.green} name="Amount Invoiced" radius={[6, 6, 0, 0]} barSize={40} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -570,7 +570,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                     fill="url(#gradGreen)" name="Budget Target" strokeDasharray="6 3" />
                   <Area type="monotone" dataKey="invoiced" stroke={C.accent} strokeWidth={2.5}
                     fill="url(#gradBlue)" name="Invoiced" dot={{ r: 4, fill: C.accent, stroke: "#fff", strokeWidth: 2 }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="plainline" iconSize={8} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
