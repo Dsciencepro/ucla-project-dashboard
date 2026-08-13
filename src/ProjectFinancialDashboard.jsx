@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Area, AreaChart, CartesianGrid } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Area, AreaChart, CartesianGrid } from "recharts";
 
 // ─── Sample Data Generator ─────────────────────────────────────────────────
 const BILLING_METHODS = ["T&M", "Lump Sum", "Cost Plus", "Unit Price"];
@@ -96,14 +96,6 @@ function filterMonths(period) {
 }
 
 // ─── Monthly trend data (simulated 8 months) ───────────────────────────────
-const monthlyTrend = ALL_MONTHS.map((m) => {
-  const rows = projectMonthlyData.filter(r => r.month === m.key);
-  return {
-    month: m.short,
-    invoiced: rows.reduce((s, r) => s + r.invoiced, 0),
-    budget: rows.reduce((s, r) => s + r.budget, 0),
-  };
-});
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
 const fmtCurrency = (v) => {
