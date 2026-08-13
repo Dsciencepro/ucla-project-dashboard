@@ -1,5 +1,5 @@
 [phases.build]
-cmds = ["npm install", "DISABLE_ESLINT_PLUGIN=true npm run build"]
+cmds = ["npm install"]
 
 [start]
-cmd = "npx serve -s build -l $PORT"
+cmd = "node server.js"
