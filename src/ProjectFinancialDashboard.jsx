@@ -1,11 +1,17 @@
 import { useState, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Area, AreaChart, CartesianGrid } from "recharts";
 
-// ─── Sample Data Generator (mirrors the PBIX star schema) ───────────────────
+// ─── Sample Data Generator ─────────────────────────────────────────────────
 const BILLING_METHODS = ["T&M", "Lump Sum", "Cost Plus", "Unit Price"];
 const STATUS_LABELS = ["Under Budget", "On Track", "At Risk", "Over Budget"];
 
+function seededRandom(seed) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+}
+
 function generateProjects(n = 24) {
+  const rand = seededRandom(42);
   const names = [
     "Luskin Center Renovation", "Engineering VI HVAC Upgrade", "Pauley Pavilion AV Systems",
     "Broad Art Center Exterior", "Life Sciences Phase II", "Geffen Playhouse Lighting",
@@ -19,49 +25,47 @@ function generateProjects(n = 24) {
   return names.slice(0, n).map((name, i) => {
     const projNum = `PRJ-${String(2024001 + i)}`;
     const billingMethod = BILLING_METHODS[i % BILLING_METHODS.length];
-    const originalContract = Math.round((150000 + Math.random() * 2850000) / 1000) * 1000;
-    const changeOrderPct = (Math.random() * 0.25 - 0.05);
+    const originalContract = Math.round((150000 + rand() * 2850000) / 1000) * 1000;
+    const changeOrderPct = (rand() * 0.25 - 0.05);
     const approvedChangeOrders = Math.round(originalContract * changeOrderPct / 100) * 100;
     const revisedContract = originalContract + approvedChangeOrders;
-    const invoicedPct = 0.15 + Math.random() * 0.75;
+    const invoicedPct = 0.15 + rand() * 0.75;
     const amountInvoiced = Math.round(revisedContract * invoicedPct / 100) * 100;
-    const draftPct = Math.random() * 0.15;
+    const draftPct = rand() * 0.15;
     const draftProForma = Math.round(revisedContract * draftPct / 100) * 100;
     const totalBilledAndDraft = amountInvoiced + draftProForma;
     const remainingAfterDraft = revisedContract - totalBilledAndDraft;
     const utilizationPct = revisedContract > 0 ? (totalBilledAndDraft / revisedContract) * 100 : 0;
-    const fastHours = Math.round(50 + Math.random() * 2000);
+    const fastHours = Math.round(50 + rand() * 2000);
     let status;
     if (utilizationPct > 95) status = "Over Budget";
     else if (utilizationPct > 80) status = "At Risk";
     else if (utilizationPct > 50) status = "On Track";
     else status = "Under Budget";
-
     return {
-      projectNumber: projNum,
-      projectName: name,
-      billingMethod,
-      originalContract,
-      approvedChangeOrders,
-      revisedContract,
-      amountInvoiced,
-      draftProForma,
-      totalBilledAndDraft,
-      fastHours,
-      remainingAfterDraft,
-      utilizationPct,
-      status,
+      projectNumber: projNum, projectName: name, billingMethod,
+      originalContract, approvedChangeOrders, revisedContract,
+      amountInvoiced, draftProForma, totalBilledAndDraft,
+      fastHours, remainingAfterDraft, utilizationPct, status,
     };
   });
 }
 
 const PROJECTS = generateProjects(24);
 
+// ─── Monthly trend data (simulated 6 months) ───────────────────────────────
+const MONTHS = ["Mar", "Apr", "May", "Jun", "Jul", "Aug"];
+const monthlyTrend = MONTHS.map((m, i) => ({
+  month: m,
+  invoiced: Math.round(1800000 + i * 320000 + (i === 3 ? -200000 : 0) + (i === 5 ? 150000 : 0)),
+  budget: Math.round(2000000 + i * 280000),
+}));
+
 // ─── Formatters ─────────────────────────────────────────────────────────────
 const fmtCurrency = (v) => {
   if (v == null) return "—";
   const abs = Math.abs(v);
-  const str = abs >= 1e6 ? `$${(abs / 1e6).toFixed(2)}M` : `$${abs.toLocaleString("en-US")}`;
+  const str = abs >= 1e6 ? `$${(abs / 1e6).toFixed(2)}M` : abs >= 1e3 ? `$${(abs / 1e3).toFixed(0)}K` : `$${abs}`;
   return v < 0 ? `(${str})` : str;
 };
 const fmtPct = (v) => (v == null ? "—" : `${v.toFixed(1)}%`);
@@ -69,28 +73,37 @@ const fmtNum = (v) => (v == null ? "—" : v.toLocaleString("en-US"));
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const C = {
-  bg: "#F6F8FB",
+  bg: "#F0F4F8",
   surface: "#FFFFFF",
-  navy: "#1B2A4A",
-  navyLight: "#2C3E6B",
+  navy: "#0F172A",
+  navyMid: "#1E293B",
+  navyLight: "#334155",
   slate: "#64748B",
+  slateLt: "#94A3B8",
   border: "#E2E8F0",
+  borderLt: "#F1F5F9",
   accent: "#3B82F6",
-  green: "#059669",
+  accentDark: "#2563EB",
+  green: "#10B981",
+  greenDark: "#059669",
   greenBg: "#ECFDF5",
-  amber: "#D97706",
+  amber: "#F59E0B",
+  amberDark: "#D97706",
   amberBg: "#FFFBEB",
-  red: "#DC2626",
+  red: "#EF4444",
+  redDark: "#DC2626",
   redBg: "#FEF2F2",
-  blue: "#2563EB",
+  blue: "#3B82F6",
   blueBg: "#EFF6FF",
+  purple: "#8B5CF6",
+  purpleBg: "#F5F3FF",
 };
 
-const statusColor = {
-  "Under Budget": { bg: C.greenBg, fg: C.green },
-  "On Track": { bg: C.blueBg, fg: C.blue },
-  "At Risk": { bg: C.amberBg, fg: C.amber },
-  "Over Budget": { bg: C.redBg, fg: C.red },
+const statusStyle = {
+  "Under Budget": { bg: C.greenBg, fg: C.greenDark, icon: "✓" },
+  "On Track": { bg: C.blueBg, fg: C.accentDark, icon: "●" },
+  "At Risk": { bg: C.amberBg, fg: C.amberDark, icon: "▲" },
+  "Over Budget": { bg: C.redBg, fg: C.redDark, icon: "!" },
 };
 
 const utilizationBarColor = (pct) => {
@@ -100,30 +113,66 @@ const utilizationBarColor = (pct) => {
   return C.green;
 };
 
+// ─── Trend Arrow Component ──────────────────────────────────────────────────
+function TrendBadge({ value, label, inverse }) {
+  const isPositive = inverse ? value < 0 : value > 0;
+  const color = isPositive ? C.greenDark : C.redDark;
+  const bg = isPositive ? C.greenBg : C.redBg;
+  const arrow = value > 0 ? "↑" : value < 0 ? "↓" : "→";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+      <span style={{
+        display: "inline-flex", alignItems: "center", gap: 3,
+        padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+        color, background: bg,
+      }}>
+        <span style={{ fontSize: 13 }}>{arrow}</span>
+        {Math.abs(value).toFixed(1)}%
+      </span>
+      <span style={{ fontSize: 10, color: C.slateLt }}>{label}</span>
+    </div>
+  );
+}
+
 // ─── KPI Card ───────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, color }) {
+function KpiCard({ label, value, trend, trendLabel, trendInverse, icon, color, sub }) {
   return (
     <div style={{
-      background: C.surface, borderRadius: 10, padding: "18px 22px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)", flex: "1 1 0",
-      minWidth: 170, borderLeft: `3px solid ${color || C.accent}`,
+      background: C.surface, borderRadius: 12, padding: "20px 22px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)",
+      flex: "1 1 0", minWidth: 185,
+      border: `1px solid ${C.borderLt}`,
+      position: "relative", overflow: "hidden",
     }}>
-      <div style={{ fontSize: 11, color: C.slate, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: C.navy }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>{sub}</div>}
+      <div style={{
+        position: "absolute", top: 14, right: 16, width: 38, height: 38,
+        borderRadius: 10, background: `${color}15`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 18,
+      }}>{icon}</div>
+      <div style={{
+        fontSize: 11, color: C.slate, textTransform: "uppercase",
+        letterSpacing: 0.7, marginBottom: 8, fontWeight: 600,
+      }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: C.navy, letterSpacing: -0.5 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.slateLt, marginTop: 2 }}>{sub}</div>}
+      {trend != null && <TrendBadge value={trend} label={trendLabel || "vs last month"} inverse={trendInverse} />}
     </div>
   );
 }
 
 // ─── Status Pill ────────────────────────────────────────────────────────────
 function StatusPill({ status }) {
-  const sc = statusColor[status] || { bg: "#f1f5f9", fg: "#475569" };
+  const s = statusStyle[status] || { bg: "#f1f5f9", fg: "#475569", icon: "?" };
   return (
     <span style={{
-      display: "inline-block", padding: "3px 10px", borderRadius: 12,
-      fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.fg,
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "4px 10px", borderRadius: 20,
+      fontSize: 11, fontWeight: 600, background: s.bg, color: s.fg,
       whiteSpace: "nowrap",
-    }}>{status}</span>
+    }}>
+      <span style={{ fontSize: 8 }}>{s.icon}</span> {status}
+    </span>
   );
 }
 
@@ -132,32 +181,54 @@ function UtilBar({ pct }) {
   const capped = Math.min(pct, 100);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 7, background: "#E2E8F0", borderRadius: 4, overflow: "hidden", minWidth: 50 }}>
-        <div style={{ width: `${capped}%`, height: "100%", background: utilizationBarColor(pct), borderRadius: 4, transition: "width .3s" }} />
+      <div style={{ flex: 1, height: 8, background: "#E2E8F0", borderRadius: 10, overflow: "hidden", minWidth: 55 }}>
+        <div style={{
+          width: `${capped}%`, height: "100%",
+          background: `linear-gradient(90deg, ${utilizationBarColor(pct)}CC, ${utilizationBarColor(pct)})`,
+          borderRadius: 10, transition: "width .4s ease",
+        }} />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 600, color: utilizationBarColor(pct), minWidth: 42, textAlign: "right" }}>{fmtPct(pct)}</span>
+      <span style={{
+        fontSize: 11, fontWeight: 700, color: utilizationBarColor(pct),
+        minWidth: 42, textAlign: "right", fontVariantNumeric: "tabular-nums",
+      }}>{fmtPct(pct)}</span>
     </div>
   );
 }
 
-// ─── Sortable Column Header ─────────────────────────────────────────────────
+// ─── Sort Header ────────────────────────────────────────────────────────────
 function SortHeader({ label, field, sortKey, sortDir, onSort, align }) {
   const active = sortKey === field;
   return (
-    <th
-      onClick={() => onSort(field)}
-      style={{
-        cursor: "pointer", userSelect: "none", padding: "10px 10px",
-        fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-        letterSpacing: 0.4, color: active ? C.accent : C.slate,
-        borderBottom: `2px solid ${active ? C.accent : C.border}`,
-        textAlign: align || "left", whiteSpace: "nowrap",
-        background: "transparent", position: "sticky", top: 0,
-        zIndex: 2, backdropFilter: "blur(6px)",
-      }}
-    >
+    <th onClick={() => onSort(field)} style={{
+      cursor: "pointer", userSelect: "none", padding: "11px 10px",
+      fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+      letterSpacing: 0.6, color: active ? C.accent : C.slateLt,
+      borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+      textAlign: align || "left", whiteSpace: "nowrap",
+      background: "#FAFBFC", position: "sticky", top: 0, zIndex: 2,
+    }}>
       {label} {active ? (sortDir === "asc" ? "↑" : "↓") : ""}
     </th>
+  );
+}
+
+// ─── Custom Tooltip ─────────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: C.navy, padding: "10px 14px", borderRadius: 8,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.3)", border: "none",
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", marginBottom: 6 }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color, display: "inline-block" }} />
+          {p.name}: {fmtCurrency(p.value)}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -199,18 +270,24 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
   const avgUtil = PROJECTS.reduce((s, p) => s + p.utilizationPct, 0) / PROJECTS.length;
   const atRiskCount = PROJECTS.filter(p => p.status === "At Risk" || p.status === "Over Budget").length;
 
-  // Chart data
+  // Chart: status distribution
   const statusCounts = STATUS_LABELS.map(s => ({
     name: s, value: PROJECTS.filter(p => p.status === s).length,
-    fill: statusColor[s]?.fg || C.slate,
+    fill: statusStyle[s]?.fg || C.slate,
   }));
 
-  const top10 = [...PROJECTS].sort((a, b) => b.revisedContract - a.revisedContract).slice(0, 10).map(p => ({
-    name: p.projectName.length > 22 ? p.projectName.slice(0, 20) + "…" : p.projectName,
-    contract: p.revisedContract,
-    invoiced: p.amountInvoiced,
-    remaining: p.remainingAfterDraft,
-  }));
+  // Chart: top 10
+  const top10 = [...PROJECTS].sort((a, b) => b.revisedContract - a.revisedContract).slice(0, 10);
+
+  // Chart: billing method
+  const billingData = BILLING_METHODS.map(bm => {
+    const projs = PROJECTS.filter(p => p.billingMethod === bm);
+    return {
+      name: bm, count: projs.length,
+      contract: projs.reduce((s, p) => s + p.revisedContract, 0),
+      invoiced: projs.reduce((s, p) => s + p.amountInvoiced, 0),
+    };
+  });
 
   const COLS = [
     { key: "projectNumber", label: "Project #", align: "left" },
@@ -219,158 +296,168 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
     { key: "originalContract", label: "Original Contract", align: "right", fmt: fmtCurrency },
     { key: "approvedChangeOrders", label: "Change Orders", align: "right", fmt: fmtCurrency },
     { key: "revisedContract", label: "Current Contract", align: "right", fmt: fmtCurrency },
-    { key: "amountInvoiced", label: "Amount Invoiced", align: "right", fmt: fmtCurrency },
+    { key: "amountInvoiced", label: "Invoiced", align: "right", fmt: fmtCurrency },
     { key: "draftProForma", label: "Draft Pro Forma", align: "right", fmt: fmtCurrency },
-    { key: "totalBilledAndDraft", label: "Total Billed + Draft", align: "right", fmt: fmtCurrency },
-    { key: "fastHours", label: "FAST Hours", align: "right", fmt: fmtNum },
+    { key: "totalBilledAndDraft", label: "Total Billed", align: "right", fmt: fmtCurrency },
+    { key: "fastHours", label: "FAST Hrs", align: "right", fmt: fmtNum },
     { key: "remainingAfterDraft", label: "Remaining", align: "right", fmt: fmtCurrency },
     { key: "utilizationPct", label: "Utilization", align: "center", custom: true },
     { key: "status", label: "Status", align: "center", custom: true },
   ];
 
+  const tabStyle = (id) => ({
+    padding: "10px 24px", fontSize: 12, fontWeight: 600,
+    border: "none", cursor: "pointer",
+    background: activeTab === id ? C.accent : "transparent",
+    color: activeTab === id ? "#fff" : C.slate,
+    borderRadius: 8, transition: "all .2s",
+  });
+
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: C.bg, minHeight: "100vh", color: C.navy, padding: 0 }}>
+    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: C.bg, minHeight: "100vh", color: C.navy }}>
       {/* ── Header ── */}
       <div style={{
-        background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyLight} 100%)`,
-        padding: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: C.navy, padding: "0 32px", display: "flex",
+        alignItems: "center", justifyContent: "space-between", height: 64,
       }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", letterSpacing: -0.3 }}>
-            Project Financial Dashboard
-          </div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>
-            Contract &amp; Billing Tracker · {PROJECTS.length} Active Projects
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 800, color: "#fff",
+          }}>PF</div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: -0.3 }}>
+              Project Financial Dashboard
+            </div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>
+              {PROJECTS.length} Active Projects · {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{user?.name || "User"}</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>{user?.role || "Viewer"}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>{user?.role || ""}</div>
           </div>
           <div style={{
             width: 36, height: 36, borderRadius: "50%",
-            background: "rgba(255,255,255,0.15)", display: "flex",
-            alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 700, color: "#fff",
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 700, color: "#fff",
           }}>{(user?.name || "U").split(" ").map(n => n[0]).join("")}</div>
           {onLogout && (
             <button onClick={onLogout} style={{
-              padding: "6px 14px", fontSize: 11, fontWeight: 600,
-              background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)",
-              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6,
-              cursor: "pointer", transition: "background .2s",
-            }}
-              onMouseEnter={e => e.target.style.background = "rgba(255,255,255,0.25)"}
-              onMouseLeave={e => e.target.style.background = "rgba(255,255,255,0.12)"}
-            >Sign Out</button>
+              padding: "7px 16px", fontSize: 11, fontWeight: 600, marginLeft: 4,
+              background: "transparent", color: "rgba(255,255,255,0.7)",
+              border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6,
+              cursor: "pointer",
+            }}>Sign Out</button>
           )}
         </div>
       </div>
 
-      <div style={{ padding: "20px 28px 28px" }}>
+      <div style={{ padding: "24px 28px 32px" }}>
         {/* ── KPI Cards ── */}
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-          <KpiCard label="Total Contract Value" value={fmtCurrency(totalRevised)} sub={`${PROJECTS.length} projects`} color={C.accent} />
-          <KpiCard label="Amount Invoiced" value={fmtCurrency(totalInvoiced)} sub={fmtPct(totalInvoiced / totalRevised * 100) + " of total"} color={C.green} />
-          <KpiCard label="Remaining Balance" value={fmtCurrency(totalRemaining)} color={C.amber} />
-          <KpiCard label="FAST Hours" value={fmtNum(totalHours)} sub={`Avg ${fmtNum(Math.round(totalHours / PROJECTS.length))} / project`} color={C.navyLight} />
-          <KpiCard label="Avg Utilization" value={fmtPct(avgUtil)} color={avgUtil > 80 ? C.amber : C.accent} />
-          <KpiCard label="At Risk / Over Budget" value={atRiskCount} sub={`of ${PROJECTS.length} projects`} color={atRiskCount > 0 ? C.red : C.green} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: 16, marginBottom: 24 }}>
+          <KpiCard label="Total Contract Value" value={fmtCurrency(totalRevised)} icon="📋" color={C.accent}
+            trend={4.2} trendLabel="vs last month" sub={`Across ${PROJECTS.length} projects`} />
+          <KpiCard label="Amount Invoiced" value={fmtCurrency(totalInvoiced)} icon="💰" color={C.green}
+            trend={8.7} trendLabel="MoM" sub={fmtPct(totalInvoiced / totalRevised * 100) + " collected"} />
+          <KpiCard label="Remaining Balance" value={fmtCurrency(totalRemaining)} icon="⏳" color={C.amber}
+            trend={-3.1} trendLabel="MoM" trendInverse={true} />
+          <KpiCard label="FAST Hours" value={fmtNum(totalHours)} icon="⏱" color={C.purple}
+            trend={12.4} trendLabel="vs last month" sub={`${fmtNum(Math.round(totalHours / PROJECTS.length))} avg/project`} />
+          <KpiCard label="Avg Utilization" value={fmtPct(avgUtil)} icon="📊" color={C.accent}
+            trend={2.8} trendLabel="MoM" />
+          <KpiCard label="At Risk Projects" value={atRiskCount} icon="⚠️" color={C.red}
+            trend={atRiskCount > 3 ? 15.0 : -10.0} trendLabel="vs last month" trendInverse={true}
+            sub={`of ${PROJECTS.length} total`} />
         </div>
 
-        {/* ── Tab Switcher ── */}
-        <div style={{ display: "flex", gap: 0, marginBottom: 18 }}>
-          {[{ id: "table", label: "Detail Table" }, { id: "charts", label: "Visual Summary" }].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-              padding: "9px 22px", fontSize: 12, fontWeight: 600,
-              border: `1px solid ${C.border}`, cursor: "pointer",
-              background: activeTab === t.id ? C.navy : C.surface,
-              color: activeTab === t.id ? "#fff" : C.slate,
-              borderRadius: t.id === "table" ? "7px 0 0 7px" : "0 7px 7px 0",
-              borderLeft: t.id === "charts" ? "none" : undefined,
-            }}>{t.label}</button>
-          ))}
+        {/* ── Tab Bar ── */}
+        <div style={{
+          display: "flex", gap: 6, marginBottom: 20, background: C.surface,
+          padding: 4, borderRadius: 10, width: "fit-content",
+          border: `1px solid ${C.border}`,
+        }}>
+          <button onClick={() => setActiveTab("table")} style={tabStyle("table")}>📋 Detail Table</button>
+          <button onClick={() => setActiveTab("charts")} style={tabStyle("charts")}>📊 Analytics</button>
+          <button onClick={() => setActiveTab("trends")} style={tabStyle("trends")}>📈 Trends</button>
         </div>
 
+        {/* ═══ TABLE TAB ═══ */}
         {activeTab === "table" && (
           <>
-            {/* ── Filters ── */}
-            <div style={{
-              display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center",
-            }}>
-              <input
-                type="text" placeholder="Search projects…" value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  padding: "8px 14px", fontSize: 13, border: `1px solid ${C.border}`,
-                  borderRadius: 7, outline: "none", minWidth: 220, background: C.surface,
-                  color: C.navy,
-                }}
-              />
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.slateLt, fontSize: 14 }}>🔍</span>
+                <input type="text" placeholder="Search projects…" value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    padding: "9px 14px 9px 36px", fontSize: 13, border: `1px solid ${C.border}`,
+                    borderRadius: 8, outline: "none", minWidth: 240, background: C.surface,
+                    color: C.navy,
+                  }} />
+              </div>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
-                padding: "8px 12px", fontSize: 12, border: `1px solid ${C.border}`,
-                borderRadius: 7, background: C.surface, color: C.navy, cursor: "pointer",
+                padding: "9px 12px", fontSize: 12, border: `1px solid ${C.border}`,
+                borderRadius: 8, background: C.surface, color: C.navy, cursor: "pointer",
               }}>
                 <option value="All">All Statuses</option>
                 {STATUS_LABELS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <select value={filterBilling} onChange={e => setFilterBilling(e.target.value)} style={{
-                padding: "8px 12px", fontSize: 12, border: `1px solid ${C.border}`,
-                borderRadius: 7, background: C.surface, color: C.navy, cursor: "pointer",
+                padding: "9px 12px", fontSize: 12, border: `1px solid ${C.border}`,
+                borderRadius: 8, background: C.surface, color: C.navy, cursor: "pointer",
               }}>
                 <option value="All">All Billing Methods</option>
                 {BILLING_METHODS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
-              <span style={{ fontSize: 12, color: C.slate, marginLeft: 4 }}>{filtered.length} of {PROJECTS.length} shown</span>
+              <span style={{
+                fontSize: 12, color: C.slateLt, background: C.borderLt,
+                padding: "6px 12px", borderRadius: 20, fontWeight: 600,
+              }}>{filtered.length} of {PROJECTS.length}</span>
             </div>
 
-            {/* ── Data Table ── */}
             <div style={{
-              background: C.surface, borderRadius: 10, overflow: "hidden",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: `1px solid ${C.border}`,
+              background: C.surface, borderRadius: 12, overflow: "hidden",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)", border: `1px solid ${C.border}`,
             }}>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1300 }}>
                   <thead>
-                    <tr style={{ background: "#F8FAFC" }}>
-                      {COLS.map(c => (
-                        <SortHeader key={c.key} label={c.label} field={c.key} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} align={c.align} />
-                      ))}
-                    </tr>
+                    <tr>{COLS.map(c => (
+                      <SortHeader key={c.key} label={c.label} field={c.key} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} align={c.align} />
+                    ))}</tr>
                   </thead>
                   <tbody>
                     {filtered.map((p, idx) => (
-                      <tr key={p.projectNumber} style={{
-                        background: idx % 2 === 0 ? "#fff" : "#FAFBFD",
-                        transition: "background .15s",
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#F0F5FF"}
-                        onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? "#fff" : "#FAFBFD"}
-                      >
+                      <tr key={p.projectNumber} style={{ borderBottom: `1px solid ${C.borderLt}` }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8FAFF"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                         {COLS.map(c => {
-                          if (c.key === "utilizationPct") return (
-                            <td key={c.key} style={{ padding: "8px 10px" }}><UtilBar pct={p.utilizationPct} /></td>
-                          );
-                          if (c.key === "status") return (
-                            <td key={c.key} style={{ padding: "8px 10px", textAlign: "center" }}><StatusPill status={p.status} /></td>
-                          );
+                          if (c.key === "utilizationPct") return <td key={c.key} style={{ padding: "9px 10px" }}><UtilBar pct={p.utilizationPct} /></td>;
+                          if (c.key === "status") return <td key={c.key} style={{ padding: "9px 10px", textAlign: "center" }}><StatusPill status={p.status} /></td>;
                           const val = p[c.key];
                           const display = c.fmt ? c.fmt(val) : val;
                           const isNeg = typeof val === "number" && val < 0;
                           return (
                             <td key={c.key} style={{
-                              padding: "8px 10px", fontSize: 12, textAlign: c.align || "left",
-                              color: isNeg ? C.red : C.navy, whiteSpace: "nowrap",
-                              fontVariantNumeric: "tabular-nums",
+                              padding: "9px 10px", fontSize: 12, textAlign: c.align || "left",
+                              color: isNeg ? C.red : c.key === "projectName" ? C.navy : C.navyLight,
+                              fontWeight: c.key === "projectName" ? 600 : 400,
+                              whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums",
                             }}>{display}</td>
                           );
                         })}
                       </tr>
                     ))}
-                    {/* Totals row */}
-                    <tr style={{ background: "#F0F4F8", fontWeight: 700 }}>
-                      <td style={{ padding: "10px 10px", fontSize: 12 }} colSpan={3}>TOTAL ({filtered.length} projects)</td>
+                    <tr style={{ background: "#F8FAFC" }}>
+                      <td colSpan={3} style={{ padding: "12px 10px", fontSize: 12, fontWeight: 700, color: C.navy }}>
+                        TOTAL ({filtered.length} projects)
+                      </td>
                       {[
                         filtered.reduce((s, p) => s + p.originalContract, 0),
                         filtered.reduce((s, p) => s + p.approvedChangeOrders, 0),
@@ -382,11 +469,11 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
                         filtered.reduce((s, p) => s + p.remainingAfterDraft, 0),
                       ].map((v, i) => (
                         <td key={i} style={{
-                          padding: "10px 10px", fontSize: 12, textAlign: "right",
+                          padding: "12px 10px", fontSize: 12, fontWeight: 700, textAlign: "right",
                           color: v < 0 ? C.red : C.navy, fontVariantNumeric: "tabular-nums",
                         }}>{i === 6 ? fmtNum(v) : fmtCurrency(v)}</td>
                       ))}
-                      <td style={{ padding: "10px 10px", fontSize: 12, textAlign: "center" }}>
+                      <td style={{ padding: "12px 10px", textAlign: "center", fontWeight: 700, fontSize: 12 }}>
                         {fmtPct(filtered.reduce((s, p) => s + p.utilizationPct, 0) / (filtered.length || 1))}
                       </td>
                       <td />
@@ -398,68 +485,126 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
           </>
         )}
 
+        {/* ═══ ANALYTICS TAB ═══ */}
         {activeTab === "charts" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            {/* Status Distribution */}
-            <div style={{ background: C.surface, borderRadius: 10, padding: 22, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 16 }}>Contract Status Distribution</div>
+            {/* Status Donut */}
+            <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Contract Status</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Distribution across {PROJECTS.length} projects</div>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={statusCounts} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}
-                    innerRadius={50} paddingAngle={3} label={({ name, value }) => `${name}: ${value}`}
-                    style={{ fontSize: 11 }}>
-                    {statusCounts.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                  <Pie data={statusCounts} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95}
+                    innerRadius={55} paddingAngle={4} cornerRadius={4}
+                    label={({ name, value }) => `${value}`}
+                    style={{ fontSize: 12, fontWeight: 700 }}>
+                    {statusCounts.map((e, i) => <Cell key={i} fill={e.fill} stroke="none" />)}
                   </Pie>
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Top 10 by Contract Value */}
-            <div style={{ background: C.surface, borderRadius: 10, padding: 22, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 16 }}>Top 10 Projects by Contract Value</div>
+            {/* Top 10 Horizontal Bar */}
+            <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Top 10 by Contract Value</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Invoiced vs remaining balance</div>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={top10} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                  <XAxis type="number" tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="name" width={140} style={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => fmtCurrency(v)} contentStyle={{ fontSize: 12 }} />
+                <BarChart data={top10.map(p => ({
+                  name: p.projectName.length > 18 ? p.projectName.slice(0, 16) + "…" : p.projectName,
+                  invoiced: p.amountInvoiced,
+                  remaining: p.remainingAfterDraft,
+                }))} layout="vertical" margin={{ left: 5, right: 20 }}>
+                  <XAxis type="number" tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" width={115} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="invoiced" stackId="a" fill={C.accent} name="Invoiced" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="remaining" stackId="a" fill="#CBD5E1" name="Remaining" radius={[0, 3, 3, 0]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="remaining" stackId="a" fill="#E2E8F0" name="Remaining" radius={[0, 4, 4, 0]} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Billing Method Breakdown */}
-            <div style={{ background: C.surface, borderRadius: 10, padding: 22, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: `1px solid ${C.border}`, gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 16 }}>Contract Value by Billing Method</div>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={BILLING_METHODS.map(bm => {
-                  const projs = PROJECTS.filter(p => p.billingMethod === bm);
-                  return {
-                    name: bm,
-                    count: projs.length,
-                    contract: projs.reduce((s, p) => s + p.revisedContract, 0),
-                    invoiced: projs.reduce((s, p) => s + p.amountInvoiced, 0),
-                  };
-                })} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <XAxis dataKey="name" style={{ fontSize: 11 }} />
-                  <YAxis tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => fmtCurrency(v)} contentStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="contract" fill={C.navyLight} name="Current Contract" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="invoiced" fill={C.green} name="Amount Invoiced" radius={[4, 4, 0, 0]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+            {/* Billing Method */}
+            <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}`, gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Billing Method Breakdown</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Contract value vs amount invoiced by billing type</div>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={billingData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.borderLt} />
+                  <XAxis dataKey="name" style={{ fontSize: 11 }} axisLine={false} />
+                  <YAxis tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="contract" fill={C.navyLight} name="Current Contract" radius={[6, 6, 0, 0]} barSize={40} />
+                  <Bar dataKey="invoiced" fill={C.green} name="Amount Invoiced" radius={[6, 6, 0, 0]} barSize={40} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
         )}
 
-        {/* Footer */}
-        <div style={{ marginTop: 24, padding: "12px 0", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 11, color: C.slate }}>
-          <span>Data entities: DimProject · FactRevenueBudget · FactInvoiceLine · FactProForma · FactFASTActivity · ContractOverride</span>
-          <span>React Dashboard · Powered by sample data</span>
-        </div>
+        {/* ═══ TRENDS TAB ═══ */}
+        {activeTab === "trends" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
+            <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Monthly Invoicing vs Budget</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 20 }}>6-month trend · Budget target vs actual invoiced</div>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={monthlyTrend} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.accent} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={C.accent} stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.green} stopOpacity={0.2} />
+                      <stop offset="100%" stopColor={C.green} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.borderLt} />
+                  <XAxis dataKey="month" style={{ fontSize: 11 }} axisLine={false} />
+                  <YAxis tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} style={{ fontSize: 10 }} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="budget" stroke={C.slateLt} strokeWidth={2}
+                    fill="url(#gradGreen)" name="Budget Target" strokeDasharray="6 3" />
+                  <Area type="monotone" dataKey="invoiced" stroke={C.accent} strokeWidth={2.5}
+                    fill="url(#gradBlue)" name="Invoiced" dot={{ r: 4, fill: C.accent, stroke: "#fff", strokeWidth: 2 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Per-project sparkline summary */}
+            <div style={{ background: C.surface, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 }}>Project Health Summary</div>
+              <div style={{ fontSize: 12, color: C.slateLt, marginBottom: 16 }}>Quick view · utilization and status across all projects</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+                {PROJECTS.slice(0, 12).map(p => {
+                  const s = statusStyle[p.status];
+                  return (
+                    <div key={p.projectNumber} style={{
+                      padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.borderLt}`,
+                      display: "flex", alignItems: "center", gap: 12, background: "#FAFBFC",
+                    }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: s.fg, flexShrink: 0,
+                      }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {p.projectName}
+                        </div>
+                        <div style={{ fontSize: 10, color: C.slateLt }}>{fmtCurrency(p.revisedContract)}</div>
+                      </div>
+                      <UtilBar pct={p.utilizationPct} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
