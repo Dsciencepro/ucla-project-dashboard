@@ -987,12 +987,119 @@ function DataHealthPage() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PAGE: HELP
+// ══════════════════════════════════════════════════════════════════════════════
+function HelpPage() {
+  const [openFaq, setOpenFaq] = useState(null);
+
+  const guides = [
+    { icon: "◉", title: "Portfolio Overview", desc: "Understand your KPI cards, budget performance list, and monthly cost trend chart.", steps: ["Navigate to Overview from the sidebar", "KPI cards show revised budget, actual + committed, remaining, and labor utilization", "Budget performance shows each project's spend progress against its revised budget", "Monthly cost trend compares actual invoicing vs your spending plan"] },
+    { icon: "◫", title: "Managing Projects", desc: "View all projects, sort by any column, and drill into monthly spend breakdowns.", steps: ["Click Projects in the sidebar to see the full portfolio", "Use column headers to sort by utilization, budget, status, etc.", "Click any row to expand a detailed monthly spend chart", "Status charts at the top show distribution by phase, PM, and status"] },
+    { icon: "▤", title: "Task Code Analysis", desc: "Track hours allocated, logged, and scheduled across all task codes.", steps: ["Task Codes page shows utilization across all work categories", "The donut chart breaks down logged hours by task code", "Monthly trend shows how hour consumption changes over time", "Review remaining hours to identify codes at risk of overrun"] },
+    { icon: "◨", title: "Forecasting & Risk", desc: "Analyze burn rate, projected spend, and identify at-risk projects.", steps: ["Forecast page calculates your current monthly burn rate", "Cumulative spend chart shows actuals vs plan with projected forecast line", "The risk scatter plot maps utilization against budget size", "Quarterly cards show variance between actual and planned spend"] },
+    { icon: "✦", title: "Data Health Monitoring", desc: "Check data completeness, source freshness, and validation rule compliance.", steps: ["Data Health shows sync status for all upstream data feeds", "Field completeness tracks which data fields have gaps", "Validation rules check business logic (e.g. actual ≤ budget)", "Stale data alerts appear when a source hasn't synced in 24+ hours"] },
+  ];
+
+  const faqs = [
+    { q: "How often does the data refresh?", a: "Financial data from SAP refreshes every 2 hours. FAST timekeeping syncs every 4 hours. Pro Forma staging updates daily. You can check exact sync times on the Data Health page." },
+    { q: "What does 'Needs attention' status mean?", a: "A project is flagged 'Needs attention' when its utilization exceeds 90% of the revised budget. This means the project is close to or at risk of exceeding its approved budget and may need a change order or scope adjustment." },
+    { q: "How is Labor Utilization calculated?", a: "Labor Utilization = (Logged Hours + Scheduled Hours) / Allocated Hours × 100. It includes both actual time entries and forward-scheduled FAS hours against the total allocation for each task code." },
+    { q: "Can I export data to Excel?", a: "Yes — click the 'Export' button on any page to download the current view as a CSV file. For formatted reports, use the Export button on the Overview page which generates a PDF summary." },
+    { q: "Who can access this dashboard?", a: "Access is role-based. Admins have full access. Project Managers see their assigned projects. Finance Leads see all financial data. Directors have read-only portfolio view. Viewers see summary data only." },
+    { q: "How are forecasts calculated?", a: "Forecasts use a rolling 3-month burn rate average projected forward through year-end. The forecast accuracy metric compares prior monthly forecasts against actual outcomes over the trailing 8 months." },
+    { q: "What should I do if data looks incorrect?", a: "First check the Data Health page for stale sources or validation failures. If the source is healthy, contact the data team using the form below. Most data discrepancies trace back to delayed SAP postings or pending invoice approvals." },
+    { q: "How do I get a new user account?", a: "Account requests go through your department admin. They can submit a request through the UCLA Facilities IT portal. Typical provisioning takes 1-2 business days." },
+  ];
+
+  const contacts = [
+    { name: "Portfolio Support", email: "portfolio-support@facilities.ucla.edu", desc: "General questions about the dashboard", hours: "M–F 8am–5pm PT" },
+    { name: "Data Engineering", email: "data-team@facilities.ucla.edu", desc: "Data quality issues, missing records, sync problems", hours: "M–F 7am–6pm PT" },
+    { name: "IT Helpdesk", email: "it-help@facilities.ucla.edu", desc: "Login issues, access requests, permissions", hours: "24/7" },
+  ];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, color: C.teal, marginBottom: 6 }}>Support Center</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Portal Guide & Help</div>
+        <div style={{ fontSize: 13, color: C.textLight, marginTop: 4 }}>Learn how to use each section of the Capital Portfolio dashboard.</div>
+      </div>
+
+      {/* Quick Start Guides */}
+      <SectionCard title="Quick Start Guides" subtitle="Step-by-step walkthroughs for each dashboard section" style={{ marginBottom: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 0 }}>
+          {guides.map((g, gi) => (
+            <div key={gi} style={{ padding: "20px 22px", borderRight: gi < guides.length - 1 ? `1px solid ${C.borderLight}` : "none", borderBottom: `1px solid ${C.borderLight}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: `${C.teal}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: C.teal }}>{g.icon}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{g.title}</div>
+              </div>
+              <div style={{ fontSize: 12, color: C.textMid, marginBottom: 12, lineHeight: 1.5 }}>{g.desc}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {g.steps.map((step, si) => (
+                  <div key={si} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", background: C.teal, color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{si + 1}</span>
+                    <span style={{ fontSize: 11, color: C.textMid, lineHeight: 1.5 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* FAQs */}
+      <SectionCard title="Frequently Asked Questions" subtitle={`${faqs.length} common questions answered`} style={{ marginBottom: 22 }}>
+        <div>
+          {faqs.map((faq, i) => (
+            <div key={i} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+              <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "14px 20px", cursor: "pointer", transition: "background .15s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = "#FAFBFC"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: openFaq === i ? C.teal : "#E8ECF1", color: openFaq === i ? "#fff" : C.textMid, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s" }}>?</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{faq.q}</span>
+                </div>
+                <span style={{ fontSize: 16, color: C.textLight, transform: openFaq === i ? "rotate(180deg)" : "none", transition: "transform .2s" }}>⌄</span>
+              </div>
+              {openFaq === i && (
+                <div style={{ padding: "0 20px 16px 52px", fontSize: 13, color: C.textMid, lineHeight: 1.6 }}>{faq.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Contact Cards */}
+      <SectionCard title="Contact Support" subtitle="Reach out to the right team for your issue">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
+          {contacts.map((c, i) => (
+            <div key={i} style={{ padding: "22px 24px", borderRight: i < contacts.length - 1 ? `1px solid ${C.borderLight}` : "none" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: `${CHART_COLORS[i]}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 14, color: CHART_COLORS[i] }}>
+                {["📧", "🔧", "🖥"][i]}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 4 }}>{c.name}</div>
+              <div style={{ fontSize: 12, color: C.textMid, marginBottom: 10, lineHeight: 1.5 }}>{c.desc}</div>
+              <div style={{ fontSize: 12, color: C.teal, fontWeight: 600, marginBottom: 4 }}>{c.email}</div>
+              <div style={{ fontSize: 11, color: C.textLight }}>Available: {c.hours}</div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD SHELL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function ProjectFinancialDashboard({ user, onLogout }) {
   const [activePage, setActivePage] = useState("overview");
 
-  const pages = { overview: <OverviewPage user={user}/>, projects: <ProjectsPage/>, tasks: <TaskCodesPage/>, forecast: <ForecastPage/>, datahealth: <DataHealthPage/> };
+  const pages = { overview: <OverviewPage user={user}/>, projects: <ProjectsPage/>, tasks: <TaskCodesPage/>, forecast: <ForecastPage/>, datahealth: <DataHealthPage/>, help: <HelpPage/> };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -1012,7 +1119,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
           <NavItem icon="✦" label="Data health" active={activePage==="datahealth"} onClick={()=>setActivePage("datahealth")} />
         </div>
         <div style={{ marginTop: "auto", padding: "16px 16px 20px" }}>
-          <div style={{ padding: "12px 14px", borderRadius: 8, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+          <div onClick={() => setActivePage("help")} style={{ padding: "12px 14px", borderRadius: 8, background: activePage === "help" ? C.sidebarActive : "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <span>💡</span><div><div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>Need help?</div><div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>View the portal guide</div></div>
             <span style={{ color: "rgba(255,255,255,0.3)", marginLeft: "auto" }}>›</span>
           </div>
