@@ -732,12 +732,267 @@ function ForecastPage() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PAGE: DATA HEALTH
+// ══════════════════════════════════════════════════════════════════════════════
+function DataHealthPage() {
+  const r = seededRandom(777);
+
+  // Data completeness per field
+  const fields = [
+    { field: "Project Name", table: "DimProject", complete: 24, total: 24 },
+    { field: "Revised Budget", table: "FactRevenueBudget", complete: 24, total: 24 },
+    { field: "Actual Spend", table: "FactInvoiceLine", complete: 23, total: 24 },
+    { field: "Change Orders", table: "FactRevenueBudget", complete: 22, total: 24 },
+    { field: "PM Assignment", table: "DimProject", complete: 21, total: 24 },
+    { field: "Phase", table: "DimProject", complete: 24, total: 24 },
+    { field: "Billing Method", table: "ContractOverride", complete: 20, total: 24 },
+    { field: "FAST Hours", table: "FactFASTActivity", complete: 18, total: 24 },
+    { field: "Pro Forma Draft", table: "FactProForma", complete: 16, total: 24 },
+    { field: "Start/End Dates", table: "DimProject", complete: 22, total: 24 },
+    { field: "Task Code Mapping", table: "FactFASTActivity", complete: 19, total: 24 },
+    { field: "Invoice Line Items", table: "FactInvoiceLine", complete: 23, total: 24 },
+  ];
+
+  const overallComplete = fields.reduce((s, f) => s + f.complete, 0);
+  const overallTotal = fields.reduce((s, f) => s + f.total, 0);
+  const overallPct = (overallComplete / overallTotal * 100);
+
+  // Data freshness
+  const sources = [
+    { name: "SAP Financial Module", lastSync: "2 hours ago", status: "healthy", records: "148,203", latency: "1.2s" },
+    { name: "FAST Timekeeping", lastSync: "4 hours ago", status: "healthy", records: "52,841", latency: "0.8s" },
+    { name: "Contract Management DB", lastSync: "6 hours ago", status: "healthy", records: "3,412", latency: "2.1s" },
+    { name: "Pro Forma Staging", lastSync: "1 day ago", status: "warning", records: "892", latency: "4.5s" },
+    { name: "HR/PM Assignments", lastSync: "3 days ago", status: "stale", records: "1,205", latency: "0.5s" },
+  ];
+
+  // Validation rules
+  const validations = [
+    { rule: "Budget > 0 for all active projects", passed: 24, failed: 0, severity: "critical" },
+    { rule: "Actual ≤ Revised Budget (no overruns without flag)", passed: 22, failed: 2, severity: "high" },
+    { rule: "PM assigned to every project", passed: 21, failed: 3, severity: "medium" },
+    { rule: "Task codes map to valid GL accounts", passed: 19, failed: 5, severity: "high" },
+    { rule: "Invoice dates within project date range", passed: 23, failed: 1, severity: "medium" },
+    { rule: "No duplicate invoice line items", passed: 24, failed: 0, severity: "critical" },
+    { rule: "FAST hours ≤ allocated hours per code", passed: 17, failed: 7, severity: "high" },
+    { rule: "Change orders have approval timestamps", passed: 20, failed: 4, severity: "medium" },
+    { rule: "Pro forma amounts reconcile to contracts", passed: 15, failed: 9, severity: "low" },
+    { rule: "Billing method consistent across invoices", passed: 22, failed: 2, severity: "low" },
+  ];
+
+  const criticalFails = validations.filter(v => v.severity === "critical" && v.failed > 0).length;
+  const highFails = validations.filter(v => v.severity === "high" && v.failed > 0).length;
+  const totalPassed = validations.reduce((s, v) => s + v.passed, 0);
+  const totalChecked = validations.reduce((s, v) => s + v.passed + v.failed, 0);
+  const validationScore = (totalPassed / totalChecked * 100);
+
+  // Monthly data quality trend
+  const qualityTrend = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug"].map((m, i) => ({
+    month: m,
+    completeness: 88 + i * 1.2 + (r() - 0.5) * 2,
+    accuracy: 91 + i * 0.8 + (r() - 0.5) * 3,
+    freshness: 82 + i * 2 + (r() - 0.5) * 4,
+  }));
+
+  // Entity record counts for pie
+  const entities = [
+    { name: "FactInvoiceLine", value: 148203 },
+    { name: "FactFASTActivity", value: 52841 },
+    { name: "FactRevenueBudget", value: 3412 },
+    { name: "FactProForma", value: 892 },
+    { name: "DimProject", value: 24 },
+    { name: "ContractOverride", value: 156 },
+  ];
+
+  const sevColors = { critical: C.red, high: C.amber, medium: C.blue, low: C.textLight };
+  const statusIcon = { healthy: { bg: C.greenBg, color: C.green, label: "Healthy" }, warning: { bg: C.amberBg, color: C.amber, label: "Warning" }, stale: { bg: C.redBg, color: C.red, label: "Stale" } };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, color: C.teal, marginBottom: 6 }}>System Monitoring</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Data Health Dashboard</div>
+          <div style={{ fontSize: 13, color: C.textLight, marginTop: 4 }}>Completeness, freshness, and validation status across all data entities.</div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button style={{ padding: "9px 18px", fontSize: 12, fontWeight: 600, background: C.surface, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, cursor: "pointer" }}>↓ Export Report</button>
+          <button style={{ padding: "9px 18px", fontSize: 12, fontWeight: 600, background: C.teal, color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,119,182,0.3)" }}>⟳ Run Checks</button>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: "flex", gap: 16, marginBottom: 22 }}>
+        <KpiCard label="Overall Completeness" value={fmtPct(overallPct)} icon="📋"
+          detail={`${overallComplete} of ${overallTotal} fields populated`}
+          barPct={overallPct} barColor={overallPct > 90 ? C.green : C.amber} />
+        <KpiCard label="Validation Score" value={fmtPct(validationScore)} icon="✓"
+          detail={`${totalPassed} of ${totalChecked} checks passed`}
+          barPct={validationScore} barColor={validationScore > 90 ? C.green : C.amber} />
+        <KpiCard label="Critical Issues" value={criticalFails} icon="🔴"
+          detail={criticalFails === 0 ? "No critical failures" : `${criticalFails} rules failing`}
+          barPct={criticalFails === 0 ? 100 : 30} barColor={criticalFails === 0 ? C.green : C.red} />
+        <KpiCard label="High Priority" value={highFails} icon="🟡"
+          detail={`${highFails} high-severity rules need review`}
+          barPct={highFails === 0 ? 100 : 60} barColor={highFails === 0 ? C.green : C.amber} />
+      </div>
+
+      {/* Alert if stale sources */}
+      {sources.some(s => s.status === "stale") && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", background: C.redBg, borderRadius: 8, marginBottom: 22, border: "1px solid #FFCDD2" }}>
+          <span style={{ fontSize: 18 }}>🔴</span>
+          <div style={{ flex: 1, fontSize: 13, color: "#B71C1C" }}>
+            <strong>Stale data detected.</strong> {sources.filter(s => s.status === "stale").map(s => s.name).join(", ")} hasn't synced in over 24 hours. Data may be outdated.
+          </div>
+          <span style={{ fontSize: 12, color: C.teal, fontWeight: 600, cursor: "pointer" }}>Trigger sync →</span>
+        </div>
+      )}
+
+      {/* Charts Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 22 }}>
+        <SectionCard title="Data Quality Trend" subtitle="Monthly completeness, accuracy, and freshness scores">
+          <div style={{ padding: 16 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={qualityTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+                <XAxis dataKey="month" style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[75, 100]} tickFormatter={v => `${v}%`} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return <div style={{ background: C.navy, padding: "10px 14px", borderRadius: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", marginBottom: 6 }}>{label}</div>
+                    {payload.map((p, i) => <div key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+                      <span style={{ width: 8, height: 3, borderRadius: 1, background: p.color, display: "inline-block" }} />{p.name}: {p.value.toFixed(1)}%
+                    </div>)}
+                  </div>;
+                }} />
+                <Line type="monotone" dataKey="completeness" stroke={C.teal} strokeWidth={2.5} name="Completeness" dot={{ r: 3, fill: C.teal, stroke: "#fff", strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="accuracy" stroke={C.green} strokeWidth={2} name="Accuracy" dot={{ r: 3, fill: C.green, stroke: "#fff", strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="freshness" stroke={C.amber} strokeWidth={2} name="Freshness" dot={{ r: 3, fill: C.amber, stroke: "#fff", strokeWidth: 2 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} iconType="plainline" iconSize={12} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Records by Entity" subtitle="Total records across all data tables">
+          <div style={{ padding: 16 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={entities} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 0 }}>
+                <XAxis type="number" tickFormatter={v => v >= 1000 ? `${(v/1e3).toFixed(0)}K` : v} style={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" style={{ fontSize: 9 }} axisLine={false} tickLine={false} width={110} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  return <div style={{ background: C.navy, padding: "10px 14px", borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{payload[0].payload.name}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>{payload[0].value.toLocaleString()} records</div>
+                  </div>;
+                }} />
+                <Bar dataKey="value" fill={C.teal} radius={[0, 4, 4, 0]} barSize={14} name="Records">
+                  {entities.map((e, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+      </div>
+
+      {/* Data Sources */}
+      <SectionCard title="Data Source Connections" subtitle="Sync status and latency for all upstream feeds" style={{ marginBottom: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0 }}>
+          {sources.map(s => {
+            const st = statusIcon[s.status];
+            return (
+              <div key={s.name} style={{ padding: "18px 20px", borderRight: `1px solid ${C.borderLight}`, textAlign: "center" }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: st.color, margin: "0 auto 10px", boxShadow: `0 0 8px ${st.color}40` }} />
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, marginBottom: 4 }}>{s.name}</div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: st.color, background: st.bg, padding: "2px 8px", borderRadius: 10, marginBottom: 8 }}>
+                  {st.label}
+                </div>
+                <div style={{ fontSize: 11, color: C.textLight, marginBottom: 2 }}>Last sync: {s.lastSync}</div>
+                <div style={{ fontSize: 11, color: C.textLight }}>{s.records} records · {s.latency}</div>
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      {/* Field Completeness */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 22 }}>
+        <SectionCard title="Field Completeness" subtitle="Population rate by data field">
+          <div style={{ padding: "8px 0" }}>
+            {fields.map(f => {
+              const pct = f.complete / f.total * 100;
+              const missing = f.total - f.complete;
+              return (
+                <div key={f.field} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 20px", borderBottom: `1px solid ${C.borderLight}` }}>
+                  <div style={{ flex: "0 0 160px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{f.field}</div>
+                    <div style={{ fontSize: 10, color: C.textLight }}>{f.table}</div>
+                  </div>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, height: 6, background: "#E8ECF1", borderRadius: 3 }}>
+                      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: pct === 100 ? C.green : pct > 80 ? C.teal : C.amber }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: pct === 100 ? C.green : pct > 80 ? C.teal : C.amber, minWidth: 36 }}>{fmtPct(pct)}</span>
+                  </div>
+                  <div style={{ flex: "0 0 60px", textAlign: "right", fontSize: 11, color: missing > 0 ? C.amber : C.textLight }}>
+                    {missing > 0 ? `${missing} missing` : "Complete"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+
+        {/* Validation Rules */}
+        <SectionCard title="Validation Rules" subtitle="Business rule checks and failure counts">
+          <div style={{ padding: "4px 0", maxHeight: 420, overflowY: "auto" }}>
+            {validations.map((v, i) => {
+              const total = v.passed + v.failed;
+              const pct = v.passed / total * 100;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px", borderBottom: `1px solid ${C.borderLight}` }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: v.failed === 0 ? C.green : sevColors[v.severity],
+                    flexShrink: 0, boxShadow: v.failed > 0 ? `0 0 6px ${sevColors[v.severity]}50` : "none",
+                  }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.rule}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                      <div style={{ width: 80, height: 4, background: "#E8ECF1", borderRadius: 2 }}>
+                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: v.failed === 0 ? C.green : sevColors[v.severity] }} />
+                      </div>
+                      <span style={{ fontSize: 10, color: C.textLight }}>{v.passed}/{total}</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    {v.failed === 0 ? (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: C.green, background: C.greenBg, padding: "2px 8px", borderRadius: 10 }}>Passed</span>
+                    ) : (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: sevColors[v.severity], background: v.severity === "critical" ? C.redBg : v.severity === "high" ? C.amberBg : C.purpleBg, padding: "2px 8px", borderRadius: 10 }}>
+                        {v.failed} failed · {v.severity}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD SHELL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function ProjectFinancialDashboard({ user, onLogout }) {
   const [activePage, setActivePage] = useState("overview");
 
-  const pages = { overview: <OverviewPage user={user}/>, projects: <ProjectsPage/>, tasks: <TaskCodesPage/>, forecast: <ForecastPage/> };
+  const pages = { overview: <OverviewPage user={user}/>, projects: <ProjectsPage/>, tasks: <TaskCodesPage/>, forecast: <ForecastPage/>, datahealth: <DataHealthPage/> };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -754,7 +1009,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
           <NavItem icon="▤" label="Task Codes" active={activePage==="tasks"} onClick={()=>setActivePage("tasks")} />
           <NavItem icon="◨" label="Forecast" active={activePage==="forecast"} onClick={()=>setActivePage("forecast")} />
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, color: "rgba(255,255,255,0.3)", padding: "16px 8px 6px" }}>System</div>
-          <NavItem icon="✦" label="Data health" />
+          <NavItem icon="✦" label="Data health" active={activePage==="datahealth"} onClick={()=>setActivePage("datahealth")} />
         </div>
         <div style={{ marginTop: "auto", padding: "16px 16px 20px" }}>
           <div style={{ padding: "12px 14px", borderRadius: 8, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
