@@ -422,9 +422,9 @@ function ProjectsPage() {
 
         <SectionCard title="By Phase" subtitle="Budget allocation per phase">
           <div style={{ padding: 14 }}>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={byPhase} margin={{top:5,right:10,left:-10,bottom:0}}>
-                <XAxis dataKey="name" style={{fontSize:9}} axisLine={false} tickLine={false} interval={0}/>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={byPhase} margin={{top:5,right:10,left:-10,bottom:40}}>
+                <XAxis dataKey="name" style={{fontSize:9}} axisLine={false} tickLine={false} angle={-25} textAnchor="end" interval={0} height={50}/>
                 <YAxis tickFormatter={v=>`$${(v/1e6).toFixed(1)}M`} style={{fontSize:9}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<ChartTooltip/>}/>
                 <Bar dataKey="budget" fill={C.teal} radius={[4,4,0,0]} barSize={28} name="Budget"/>
