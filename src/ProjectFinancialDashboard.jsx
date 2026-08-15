@@ -401,9 +401,15 @@ function ProjectsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 22 }}>
         <SectionCard title="By Status" subtitle="Project distribution">
           <div style={{ padding: 14 }}>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart><Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40} paddingAngle={4} cornerRadius={3}
-                label={({percent})=>`${(percent*100).toFixed(0)}%`} style={{fontSize:11}}>
+            <ResponsiveContainer width="100%" height={210}>
+              <PieChart><Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="48%" outerRadius={60} innerRadius={35} paddingAngle={4} cornerRadius={3}
+                label={({percent, cx, x, y, midAngle})=> {
+                  const RADIAN = Math.PI / 180;
+                  const radius = 72;
+                  const lx = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const ly = 210 * 0.48 + radius * Math.sin(-midAngle * RADIAN);
+                  return <text x={lx} y={ly} fill="#333" textAnchor="middle" dominantBaseline="central" style={{fontSize:11,fontWeight:700}}>{`${(percent*100).toFixed(0)}%`}</text>;
+                }}>
                 {byStatus.map((e,i) => <Cell key={i} fill={statusColors[e.name]?.dot || C.teal} stroke="none"/>)}
               </Pie><Legend wrapperStyle={{fontSize:10}} iconType="plainline" iconSize={12}/></PieChart>
             </ResponsiveContainer>
