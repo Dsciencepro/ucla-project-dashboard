@@ -559,8 +559,16 @@ function TaskCodesPage() {
         <SectionCard title="Hours Distribution" subtitle="Logged hours by task code">
           <div style={{ padding: 16 }}>
             <ResponsiveContainer width="100%" height={240}>
-              <PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={45} paddingAngle={3} cornerRadius={3}
-                label={({percent})=>`${(percent*100).toFixed(0)}%`} style={{fontSize:10}}>
+              <PieChart margin={{top:10,bottom:5}}>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} innerRadius={42} paddingAngle={3} cornerRadius={3}
+                  labelLine={false}
+                  label={({cx,cy,midAngle,innerRadius,outerRadius,percent})=> {
+                    const RADIAN = Math.PI / 180;
+                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                    return percent > 0.08 ? <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" style={{fontSize:9,fontWeight:800}}>{`${(percent*100).toFixed(0)}%`}</text> : null;
+                  }}>
                 {pieData.map((e,i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="none"/>)}
               </Pie><Legend wrapperStyle={{fontSize:9}} iconType="plainline" iconSize={12}/></PieChart>
             </ResponsiveContainer>
