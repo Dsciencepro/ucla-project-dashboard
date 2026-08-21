@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend, BarChart, Bar, RadialBarChart, RadialBar,
@@ -241,8 +241,60 @@ function OverviewPage({ user }) {
   const variance = augActual - MONTHS_DATA[7].plan;
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening";
 
+  // ── Live Database Status ──
+  const [dbStatus, setDbStatus] = useState(null);
+  const [dbStats, setDbStats] = useState(null);
+  const [dbLoading, setDbLoading] = useState(true);
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/health").then(r => r.json()).catch(() => ({ status: "error" })),
+      fetch("/api/dashboard").then(r => r.json()).catch(() => null),
+    ]).then(([health, stats]) => {
+      setDbStatus(health);
+      setDbStats(stats);
+      setDbLoading(false);
+    });
+  }, []);
+
   return (
     <div>
+      {/* ── Live Database Connection Banner ── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16, padding: "14px 20px",
+        background: dbLoading ? "#F8FAFC" : dbStatus?.status === "connected" ? "#F0FDF9" : C.redBg,
+        borderRadius: 10, marginBottom: 20,
+        border: `1px solid ${dbLoading ? C.border : dbStatus?.status === "connected" ? "#A7F3D0" : "#FECACA"}`,
+      }}>
+        <div style={{
+          width: 10, height: 10, borderRadius: "50%",
+          background: dbLoading ? C.textLight : dbStatus?.status === "connected" ? C.green : C.red,
+          boxShadow: dbLoading ? "none" : dbStatus?.status === "connected" ? `0 0 8px ${C.green}60` : `0 0 8px ${C.red}60`,
+          animation: dbLoading ? "none" : "none",
+        }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: dbLoading ? C.textMid : dbStatus?.status === "connected" ? "#065F46" : "#991B1B" }}>
+            {dbLoading ? "Checking database connection..." : dbStatus?.status === "connected" ? "FAST Database Connected — Live Data" : "Database Disconnected"}
+          </div>
+          {!dbLoading && dbStats && !dbStats.error && (
+            <div style={{ fontSize: 12, color: "#047857", marginTop: 4, display: "flex", gap: 20 }}>
+              <span><strong>{dbStats.totalProjects?.toLocaleString()}</strong> projects</span>
+              <span><strong>{dbStats.totalWorkOrders?.toLocaleString()}</strong> work orders</span>
+              <span><strong>{Math.round(dbStats.totalHoursLogged || 0).toLocaleString()}</strong> hours logged</span>
+              <span><strong>{dbStats.activeEmployees?.toLocaleString()}</strong> active employees</span>
+              <span style={{ color: "#6B7280" }}>Last checked: {new Date(dbStatus.timestamp).toLocaleTimeString()}</span>
+            </div>
+          )}
+          {!dbLoading && dbStats?.error && (
+            <div style={{ fontSize: 11, color: "#991B1B", marginTop: 2 }}>{dbStats.error}</div>
+          )}
+        </div>
+        <div style={{
+          padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+          background: dbLoading ? "#E5E7EB" : dbStatus?.status === "connected" ? "#D1FAE5" : "#FEE2E2",
+          color: dbLoading ? C.textLight : dbStatus?.status === "connected" ? "#065F46" : "#991B1B",
+        }}>{dbLoading ? "Checking..." : dbStatus?.status === "connected" ? "db: FAST" : "Offline"}</div>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, color: C.teal, marginBottom: 6 }}>Portfolio Overview</div>
