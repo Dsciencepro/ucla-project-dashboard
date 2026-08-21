@@ -1,3 +1,4 @@
+// server.js — v2.0 with live FAST database API
 const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
@@ -12,7 +13,7 @@ const buildPath = path.join(__dirname, 'build');
 app.use(express.json());
 app.use(cookieParser());
 
-// ── 5 Users (passwords are bcrypt-hashed) ───────────────────────────────────
+// ── Users ───────────────────────────────────────────────────────────────────
 const USERS = [
   { id: 1, username: 'admin',      name: 'Admin User',       role: 'Admin',          password: bcrypt.hashSync('Admin@123',   10) },
   { id: 2, username: 'jthompson',   name: 'James Thompson',   role: 'Project Manager', password: bcrypt.hashSync('James@123',   10) },
@@ -30,8 +31,7 @@ app.post('/api/login', (req, res) => {
   }
   const token = jwt.sign(
     { id: user.id, username: user.username, name: user.name, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '8h' }
+    JWT_SECRET, { expiresIn: '8h' }
   );
   res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role } });
 });
@@ -42,8 +42,27 @@ app.get('/api/me', (req, res) => {
   try {
     const decoded = jwt.verify(auth.split(' ')[1], JWT_SECRET);
     res.json({ user: { id: decoded.id, username: decoded.username, name: decoded.name, role: decoded.role } });
-  } catch {
-    res.status(401).json({ error: 'Token expired or invalid' });
+  } catch { res.status(401).json({ error: 'Token expired or invalid' }); }
+});
+
+// ── Live database API routes ────────────────────────────────────────────────
+try {
+  const apiRoutes = require('./api');
+  app.use('/api', apiRoutes);
+  console.log('Live database API routes loaded');
+} catch (e) {
+  console.warn('Database API not available (will serve sample data):', e.message);
+}
+
+// ── Health check ────────────────────────────────────────────────────────────
+app.get('/api/health', async (req, res) => {
+  try {
+    const { getPool } = require('./db');
+    const pool = await getPool();
+    const result = await pool.request().query('SELECT 1 AS ok');
+    res.json({ status: 'connected', db: 'FAST', timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.json({ status: 'disconnected', error: e.message, timestamp: new Date().toISOString() });
   }
 });
 
