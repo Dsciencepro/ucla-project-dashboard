@@ -11,9 +11,9 @@ router.get('/dashboard', async (req, res) => {
         COUNT(DISTINCT p.Id) AS totalProjects,
         ISNULL(SUM(p.EstimatedAmount), 0) AS totalBudget,
         (SELECT COUNT(*) FROM WorkOrders) AS totalWorkOrders,
-        (SELECT ISNULL(SUM(CAST(
-          CASE WHEN ISNUMERIC(t.Hours) = 1 THEN t.Hours ELSE '0' END AS float
-        )), 0) FROM EmployeeTimesheets t) AS totalHoursLogged,
+        (SELECT ISNULL(SUM(
+          CAST(DATEDIFF(MINUTE, t.StartTime, t.EndTime) AS float) / 60.0
+        ), 0) FROM EmployeeTimesheets t) AS totalHoursLogged,
         (SELECT COUNT(DISTINCT EmployeeId) FROM EmployeeTimesheets) AS activeEmployees
       FROM ACUM_Project p
       WHERE p.IsArchived = 0
