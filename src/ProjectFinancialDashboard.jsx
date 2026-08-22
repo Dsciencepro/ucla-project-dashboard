@@ -498,22 +498,69 @@ function ForecastPage({ projects, monthly }) {
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:22}}>
-        {/* Monthly hours trend */}
-        <SectionCard title="Monthly Hours Trend" subtitle="Logged hours from EmployeeTimesheets (last 12 months)">
+        {/* Monthly hours — Advanced Combo Chart */}
+        <SectionCard title="Monthly Workforce Activity" subtitle="Regular vs overtime hours · EmployeeTimesheets · last 12 months">
           <div style={{padding:16}}>
-            {(monthly||[]).length > 0 ? (
-              <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={monthly} margin={{top:5,right:10,left:-10,bottom:0}}>
-                  <defs><linearGradient id="gH" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.teal} stopOpacity={0.2}/><stop offset="100%" stopColor={C.teal} stopOpacity={0.02}/></linearGradient></defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight}/>
-                  <XAxis dataKey="Month" style={{fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v?.slice(5)||v}/>
-                  <YAxis tickFormatter={v=>`${(v/1e3).toFixed(1)}K`} style={{fontSize:10}} axisLine={false} tickLine={false}/>
-                  <Tooltip content={<ChartTooltip/>}/>
-                  <Area type="monotone" dataKey="TotalHours" stroke={C.teal} strokeWidth={2.5} fill="url(#gH)" name="Total Hours" dot={{r:3,fill:C.teal,stroke:"#fff",strokeWidth:2}}/>
-                  <Area type="monotone" dataKey="OvertimeHours" stroke={C.amber} strokeWidth={1.5} fill="none" name="Overtime" strokeDasharray="4 4"/>
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : <div style={{color:C.textLight,fontSize:12,padding:40,textAlign:"center"}}>Loading monthly data...</div>}
+            {(monthly||[]).length > 0 ? (() => {
+              const data = (monthly||[]).map(m => {
+                const parts = m.Month?.split("-")||[];
+                const yr = parts[0]?.slice(2)||"";
+                const mn = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])||0]||parts[1];
+                return {...m, label: `${mn} '${yr}`, regular: (m.TotalHours||0) - (m.OvertimeHours||0)};
+              });
+              const peakMonth = data.reduce((max, m) => (m.TotalHours||0) > (max.TotalHours||0) ? m : max, data[0]);
+              const latestMonth = data[data.length - 1];
+              const prevMonth = data.length > 1 ? data[data.length - 2] : null;
+              const trend = prevMonth && prevMonth.TotalHours > 0 ? ((latestMonth.TotalHours - prevMonth.TotalHours) / prevMonth.TotalHours * 100) : 0;
+              const avgHours = data.reduce((s,m) => s + (m.TotalHours||0), 0) / data.length;
+              const totalOT = data.reduce((s,m) => s + (m.OvertimeHours||0), 0);
+              const totalAll = data.reduce((s,m) => s + (m.TotalHours||0), 0);
+              const otPct = totalAll > 0 ? (totalOT / totalAll * 100) : 0;
+
+              return (<>
+                {/* Mini stat cards */}
+                <div style={{display:"flex",gap:10,marginBottom:14}}>
+                  {[
+                    {label:"Latest",value:fmtHrs(latestMonth?.TotalHours||0),sub:latestMonth?.label,color:trend>=0?C.green:C.red,badge:`${trend>=0?"↑":"↓"}${Math.abs(trend).toFixed(1)}%`},
+                    {label:"Peak",value:fmtHrs(peakMonth?.TotalHours||0),sub:peakMonth?.label,color:C.teal},
+                    {label:"Avg/Month",value:fmtHrs(avgHours),color:"#737A82"},
+                    {label:"Overtime %",value:fmtPct(otPct),sub:fmtHrs(totalOT)+" total",color:C.amber},
+                  ].map((s,i)=>(
+                    <div key={i} style={{flex:1,padding:"8px 10px",background:"#FAFBFC",borderRadius:6,border:`1px solid ${C.borderLight}`}}>
+                      <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:C.textLight}}>{s.label}</div>
+                      <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:3}}>
+                        <span style={{fontSize:15,fontWeight:800,color:C.navy}}>{s.value}</span>
+                        {s.badge&&<span style={{fontSize:9,fontWeight:700,color:s.color,background:`${s.color}15`,padding:"1px 5px",borderRadius:8}}>{s.badge}</span>}
+                      </div>
+                      {s.sub&&<div style={{fontSize:9,color:C.textLight,marginTop:1}}>{s.sub}</div>}
+                    </div>
+                  ))}
+                </div>
+                {/* Combo chart: bars + line */}
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={data} margin={{top:5,right:10,left:-10,bottom:0}}>
+                    <defs>
+                      <linearGradient id="gBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.teal} stopOpacity={0.9}/><stop offset="100%" stopColor={C.teal} stopOpacity={0.5}/></linearGradient>
+                      <linearGradient id="gOT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.amber} stopOpacity={0.9}/><stop offset="100%" stopColor={C.amber} stopOpacity={0.5}/></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} vertical={false}/>
+                    <XAxis dataKey="label" style={{fontSize:9}} axisLine={false} tickLine={false} interval={0} angle={-30} textAnchor="end" height={35}/>
+                    <YAxis tickFormatter={v=>`${(v/1e3).toFixed(0)}K`} style={{fontSize:9}} axisLine={false} tickLine={false}/>
+                    <Tooltip content={({active,payload,label})=>{
+                      if(!active||!payload?.length) return null;
+                      return <div style={{background:C.navy,padding:"12px 16px",borderRadius:8,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:8}}>{label}</div>
+                        {payload.map((p,i)=><div key={i} style={{fontSize:11,color:"rgba(255,255,255,0.85)",display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                          <span style={{width:10,height:4,borderRadius:2,background:p.color}}/>{p.name}: {Math.round(p.value).toLocaleString()} h
+                        </div>)}
+                      </div>;
+                    }}/>
+                    <Bar dataKey="regular" stackId="hrs" fill="url(#gBar)" radius={[0,0,0,0]} name="Regular Hours"/>
+                    <Bar dataKey="OvertimeHours" stackId="hrs" fill="url(#gOT)" radius={[3,3,0,0]} name="Overtime"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </>);
+            })() : <div style={{color:C.textLight,fontSize:12,padding:40,textAlign:"center"}}>Loading monthly data...</div>}
           </div>
         </SectionCard>
 
