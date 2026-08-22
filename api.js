@@ -17,8 +17,8 @@ router.get('/dashboard', async (req, res) => {
         (SELECT COUNT(*) FROM FAST.dbo.WorkOrders) AS totalWorkOrders,
         (SELECT ISNULL(SUM(CAST(DATEDIFF(MINUTE,StartTime,EndTime) AS float)/60.0),0) FROM FAST.dbo.EmployeeTimesheets) AS totalHoursLogged,
         (SELECT COUNT(DISTINCT EmployeeId) FROM FAST.dbo.EmployeeTimesheets) AS activeEmployees,
-        (SELECT COUNT(*) FROM AcumaticaDB.dbo.PMChangeOrder WHERE Released=1) AS releasedChangeOrders,
-        (SELECT COUNT(*) FROM AcumaticaDB.dbo.PMProforma WHERE Released=1) AS releasedProformas
+        (SELECT COUNT(*) FROM AcumaticaDB.dbo.PMChangeOrder WHERE Released=1 AND CompanyID=2) AS releasedChangeOrders,
+        (SELECT COUNT(*) FROM AcumaticaDB.dbo.PMProforma WHERE Released=1 AND CompanyID=2) AS releasedProformas
     `);
     res.json(result.recordset[0]);
   } catch (e) { console.error('Dashboard error:', e.message); res.status(500).json({ error: e.message }); }
@@ -58,7 +58,7 @@ router.get('/projects', async (req, res) => {
         ISNULL(wo.WOCount, 0) AS WorkOrderCount,
         ISNULL(wo.CompletedWO, 0) AS CompletedWorkOrders
       FROM AcumaticaDB.dbo.Contract c
-      LEFT JOIN AcumaticaDB.dbo.BAccount cust ON c.CustomerID = cust.BAccountID
+      LEFT JOIN AcumaticaDB.dbo.BAccount cust ON c.CustomerID = cust.BAccountID AND cust.CompanyID = 2
       -- Revenue aggregation
       LEFT JOIN (
         SELECT ProjectID,
@@ -96,7 +96,7 @@ router.get('/projects', async (req, res) => {
           SUM(CASE WHEN Status='Completed' THEN 1 ELSE 0 END) AS CompletedWO
         FROM FAST.dbo.WorkOrders GROUP BY ProjectNo
       ) wo ON c.ContractCD = wo.ProjectNo
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
+      WHERE c.CompanyID = 2 AND c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
       ORDER BY c.ContractID DESC
     `);
     res.json(result.recordset);
@@ -110,7 +110,7 @@ router.get('/projects/:id', async (req, res) => {
     // Project
     const proj = await query(`
       SELECT c.*, cust.AcctName AS CustomerName FROM AcumaticaDB.dbo.Contract c
-      LEFT JOIN AcumaticaDB.dbo.BAccount cust ON c.CustomerID = cust.BAccountID
+      LEFT JOIN AcumaticaDB.dbo.BAccount cust ON c.CustomerID = cust.BAccountID AND cust.CompanyID = 2
       WHERE c.ContractID = @id
     `, { id });
     if (!proj.recordset.length) return res.status(404).json({ error: 'Not found' });
@@ -127,15 +127,15 @@ router.get('/projects/:id', async (req, res) => {
           SUM(CASE WHEN Type='E' THEN CuryRevisedAmount ELSE 0 END) AS CostBudget,
           SUM(CASE WHEN Type='E' THEN CuryActualAmount ELSE 0 END) AS ActualCost,
           SUM(CASE WHEN Type='R' THEN CuryInvoicedAmount ELSE 0 END) AS Invoiced
-        FROM AcumaticaDB.dbo.PMBudget WHERE ProjectID = @id GROUP BY ProjectTaskID
+        FROM AcumaticaDB.dbo.PMBudget WHERE ProjectID = @id AND CompanyID = 2 GROUP BY ProjectTaskID
       ) b ON t.TaskID = b.ProjectTaskID AND t.ProjectID = @id
-      WHERE t.ProjectID = @id ORDER BY t.TaskCD
+      WHERE t.ProjectID = @id AND t.CompanyID = 2 ORDER BY t.TaskCD
     `, { id });
 
     // Change Orders
     const cos = await query(`
       SELECT RefNbr, Description, Status, Date, CostTotal, RevenueTotal, CommitmentTotal
-      FROM AcumaticaDB.dbo.PMChangeOrder WHERE ProjectID = @id ORDER BY Date DESC
+      FROM AcumaticaDB.dbo.PMChangeOrder WHERE ProjectID = @id AND CompanyID = 2 ORDER BY Date DESC
     `, { id });
 
     // Monthly actuals from PMHistory
@@ -148,7 +148,7 @@ router.get('/projects/:id', async (req, res) => {
     // Proformas
     const proformas = await query(`
       SELECT RefNbr, Description, Status, InvoiceDate, CuryDocTotal AS Total, Released
-      FROM AcumaticaDB.dbo.PMProforma WHERE ProjectID = @id ORDER BY InvoiceDate DESC
+      FROM AcumaticaDB.dbo.PMProforma WHERE ProjectID = @id AND CompanyID = 2 ORDER BY InvoiceDate DESC
     `, { id });
 
     res.json({
@@ -170,9 +170,9 @@ router.get('/tasks', async (req, res) => {
         SUM(CASE WHEN b.Type='E' THEN b.CuryActualAmount ELSE 0 END) AS ActualCost,
         SUM(CASE WHEN b.Type='R' THEN b.CuryInvoicedAmount ELSE 0 END) AS Invoiced
       FROM AcumaticaDB.dbo.PMTask t
-      LEFT JOIN AcumaticaDB.dbo.PMBudget b ON t.ProjectID = b.ProjectID AND t.TaskID = b.ProjectTaskID
-      JOIN AcumaticaDB.dbo.Contract c ON t.ProjectID = c.ContractID
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
+      LEFT JOIN AcumaticaDB.dbo.PMBudget b ON t.ProjectID = b.ProjectID AND t.TaskID = b.ProjectTaskID AND b.CompanyID = 2
+      JOIN AcumaticaDB.dbo.Contract c ON t.ProjectID = c.ContractID AND t.CompanyID = 2
+      WHERE c.CompanyID = 2 AND c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
       GROUP BY t.TaskCD, t.Description
       ORDER BY t.TaskCD
     `);
@@ -221,7 +221,7 @@ router.get('/changeorders', async (req, res) => {
         co.CostTotal, co.RevenueTotal, co.CommitmentTotal,
         c.ContractCD AS ProjectNo, c.Description AS ProjectName
       FROM AcumaticaDB.dbo.PMChangeOrder co
-      JOIN AcumaticaDB.dbo.Contract c ON co.ProjectID = c.ContractID
+      JOIN AcumaticaDB.dbo.Contract c ON co.ProjectID = c.ContractID AND co.CompanyID = 2
       ORDER BY co.Date DESC
     `);
     res.json(result.recordset);
@@ -235,8 +235,8 @@ router.get('/financial/monthly', async (req, res) => {
       SELECT LEFT(h.PeriodID, 4) + '-' + RIGHT(h.PeriodID, 2) AS Month,
         SUM(h.FinPTDAmount) AS Amount, SUM(h.FinPTDQty) AS Qty
       FROM AcumaticaDB.dbo.PMHistory h
-      JOIN AcumaticaDB.dbo.Contract c ON h.ProjectID = c.ContractID
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
+      JOIN AcumaticaDB.dbo.Contract c ON h.ProjectID = c.ContractID AND h.CompanyID = 2
+      WHERE c.CompanyID = 2 AND c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
         AND h.PeriodID >= FORMAT(DATEADD(MONTH,-12,GETDATE()),'yyyyMM')
       GROUP BY h.PeriodID ORDER BY h.PeriodID
     `);
