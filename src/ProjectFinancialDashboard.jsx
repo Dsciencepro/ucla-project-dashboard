@@ -359,9 +359,9 @@ function ProjectsPage({ projects }) {
 // TASK CODES PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function TaskCodesPage({ tasks }) {
-  const totalBudget = (tasks||[]).reduce((s,t) => s + (t.TotalBudget||0), 0);
+  const totalBudget = (tasks||[]).reduce((s,t) => s + (t.CostBudget||0), 0);
   const totalProjects = (tasks||[]).reduce((s,t) => s + (t.ProjectCount||0), 0);
-  const pieData = (tasks||[]).filter(t=>t.TotalBudget>0).map(t=>({name:`${t.Code} ${(t.Description||"").split(" ")[0]}`,value:t.TotalBudget}));
+  const pieData = (tasks||[]).filter(t=>t.CostBudget>0).map(t=>({name:`${t.Code} ${(t.Description||"").split(" ")[0]}`,value:t.CostBudget}));
 
   return (
     <div>
@@ -393,7 +393,7 @@ function TaskCodesPage({ tasks }) {
         <SectionCard title="Budget by Code" subtitle="Top codes by budget allocation">
           <div style={{padding:16}}>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={(tasks||[]).filter(t=>t.TotalBudget>0).sort((a,b)=>(b.TotalBudget||0)-(a.TotalBudget||0)).slice(0,10)} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
+              <BarChart data={(tasks||[]).filter(t=>t.CostBudget>0).sort((a,b)=>(b.TotalBudget||0)-(a.TotalBudget||0)).slice(0,10)} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
                 <XAxis type="number" tickFormatter={v=>fmt(v)} style={{fontSize:9}} axisLine={false} tickLine={false}/>
                 <YAxis type="category" dataKey="Code" style={{fontSize:10}} axisLine={false} tickLine={false} width={50}/>
                 <Tooltip content={<ChartTooltip/>}/>
@@ -415,7 +415,7 @@ function TaskCodesPage({ tasks }) {
               <td style={{padding:"12px 16px",fontSize:13,fontWeight:600,color:C.text}}>{t.Description||"—"}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.ProjectCount||0}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.TaskAssignments||0}</td>
-              <td style={{padding:"12px 16px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(t.TotalBudget||0)}</td>
+              <td style={{padding:"12px 16px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(t.CostBudget||0)}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{Math.round(t.TotalQuantity||0).toLocaleString()}</td>
             </tr>
           ))}</tbody>
