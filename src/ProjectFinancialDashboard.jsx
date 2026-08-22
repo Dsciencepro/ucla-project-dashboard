@@ -488,38 +488,65 @@ function ForecastPage({ projects, monthly }) {
           </div>
         </SectionCard>
 
-        {/* Budget by Customer */}
-        <SectionCard title="Budget by Client" subtitle="Top 10 clients by total project budget">
-          <div style={{padding:16}}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={byCust} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
-                <XAxis type="number" tickFormatter={v=>fmt(v)} style={{fontSize:9}} axisLine={false} tickLine={false}/>
-                <YAxis type="category" dataKey="name" style={{fontSize:9}} axisLine={false} tickLine={false} width={110} tickFormatter={v=>v.length>18?v.slice(0,16)+"…":v}/>
-                <Tooltip content={<ChartTooltip/>}/>
-                <Bar dataKey="budget" fill={C.teal} radius={[0,4,4,0]} barSize={14} name="Budget"/>
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Top Clients — Custom Ranked Cards */}
+        <SectionCard title="Top Clients" subtitle="Ranked by total spend across all projects">
+          <div style={{padding:"12px 18px"}}>
+            {byCust.map((c, i) => {
+              const maxBudget = byCust[0]?.budget || 1;
+              const pct = (c.budget / maxBudget) * 100;
+              const colors = [C.teal, "#2D8EBB", C.green, C.amber, C.purple, "#E91E63", "#00BCD4", C.blue, "#737A82", "#252B31"];
+              const color = colors[i % colors.length];
+              return (
+                <div key={c.name} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:i<byCust.length-1?`1px solid ${C.borderLight}`:"none"}}>
+                  <div style={{width:24,height:24,borderRadius:6,background:`${color}18`,color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                  <div style={{flex:"0 0 160px",minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
+                    <div style={{fontSize:10,color:C.textLight}}>{c.count} projects</div>
+                  </div>
+                  <div style={{flex:1,height:20,position:"relative"}}>
+                    <div style={{position:"absolute",top:4,left:0,right:0,height:12,background:"#F0F2F5",borderRadius:6}}/>
+                    <div style={{position:"absolute",top:4,left:0,height:12,width:`${pct}%`,background:`linear-gradient(90deg, ${color}CC, ${color})`,borderRadius:6,boxShadow:`0 2px 6px ${color}30`}}/>
+                    {pct > 20 && <div style={{position:"absolute",top:5,left:`${Math.min(pct-2,95)}%`,transform:"translateX(-100%)",paddingRight:6,fontSize:9,fontWeight:700,color:"#fff"}}>{fmt(c.budget)}</div>}
+                  </div>
+                  <div style={{width:70,textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{fmt(c.budget)}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </SectionCard>
       </div>
 
-      {/* Scatter */}
-      <SectionCard title="Project Activity Map" subtitle="Actual cost vs work orders — bubble size = hours logged">
-        <div style={{padding:16}}>
-          <ResponsiveContainer width="100%" height={280}>
-            <ScatterChart margin={{top:10,right:10,left:-10,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight}/>
-              <XAxis type="number" dataKey="x" name="Actual Cost ($K)" tickFormatter={v=>v>=1e3?`$${(v/1e3).toFixed(0)}M`:`$${v.toFixed(0)}K`} style={{fontSize:10}} axisLine={false}/>
-              <YAxis type="number" dataKey="y" name="Work Orders" style={{fontSize:10}} axisLine={false}/>
-              <ZAxis type="number" dataKey="z" range={[20,300]}/>
-              <Tooltip content={({active,payload})=>{if(!active||!payload?.length)return null;const d=payload[0].payload;
-                return <div style={{background:C.navy,padding:"10px 14px",borderRadius:8}}><div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{d.name}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:4}}>Budget: {fmt(d.x)}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Work Orders: {d.y}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Work Orders: {d.z}</div></div>;}}/>
-              <Scatter data={scatter} fill={C.teal}>{scatter.map((s,i)=><Cell key={i} fill={statusMap[s.status]?.dot||C.teal} fillOpacity={0.7}/>)}</Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
+      {/* Top Projects — Custom Visual */}
+      <SectionCard title="Top 15 Projects by Actual Cost" subtitle="Largest projects ranked by spend — bar width shows relative size">
+        <div style={{padding:"14px 18px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:10}}>
+            {topByBudget.slice(0,15).map((p, i) => {
+              const maxCost = topByBudget[0]?.ActualCost || topByBudget[0]?.RevisedBudget || 1;
+              const cost = p.ActualCost || p.RevisedBudget || 0;
+              const pct = (cost / maxCost) * 100;
+              const isTop3 = i < 3;
+              return (
+                <div key={p.Id} style={{padding:"12px 14px",borderRadius:8,border:`1px solid ${isTop3 ? C.teal+"40" : C.borderLight}`,background:isTop3?"#FFF8F5":"#FAFBFC"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <span style={{width:22,height:22,borderRadius:6,background:isTop3?C.teal:"#E8ECF1",color:isTop3?"#fff":C.textMid,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{i+1}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.Name}</div>
+                      <div style={{fontSize:10,color:C.textLight}}>{p.CustomerName?.split(",")[0]||"—"} · {p.ProjectNo}</div>
+                    </div>
+                  </div>
+                  <div style={{height:6,background:"#E8ECF1",borderRadius:3,marginBottom:6}}>
+                    <div style={{width:`${pct}%`,height:"100%",borderRadius:3,background:`linear-gradient(90deg, ${C.teal}AA, ${C.teal})`,transition:"width .4s"}}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
+                    <span style={{fontWeight:700,color:C.navy}}>{fmt(cost)}</span>
+                    <span style={{color:C.textLight}}>{p.WorkOrderCount||0} WOs · {fmtHrs(p.HoursLogged||0)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </SectionCard>
     </div>
