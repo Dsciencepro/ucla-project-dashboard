@@ -119,6 +119,12 @@ function OverviewPage({ user, projects, dashboard }) {
     return Object.values(map);
   }, [projects]);
 
+  const byCust = useMemo(() => {
+    const map = {};
+    (projects||[]).forEach(p => { const c = p.CustomerName||"Unknown"; if(!map[c]) map[c]={name:c,budget:0,count:0}; map[c].budget+=(p.ActualCost||p.RevisedBudget||0); map[c].count++; });
+    return Object.values(map).sort((a,b)=>b.budget-a.budget).slice(0,10);
+  }, [projects]);
+
   return (
     <div>
       {/* DB Status */}
@@ -190,19 +196,60 @@ function OverviewPage({ user, projects, dashboard }) {
           </div>
         </SectionCard>
 
-        {/* By PM Chart */}
-        <SectionCard title="Projects by Manager" subtitle="Project count per PM">
-          <div style={{padding:16}}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={byPM} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
-                <XAxis type="number" style={{fontSize:10}} axisLine={false} tickLine={false}/>
-                <YAxis type="category" dataKey="name" style={{fontSize:10}} axisLine={false} tickLine={false} width={90} tickFormatter={v=>v.split(" ")[0]}/>
-                <Tooltip content={<ChartTooltip/>}/>
-                <Bar dataKey="count" fill={C.teal} radius={[0,4,4,0]} barSize={14} name="Projects"/>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
+        {/* Recent Activity + Top Clients */}
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {/* Top 5 Clients */}
+          <SectionCard title="Top Clients by Spend" subtitle="Largest client portfolios">
+            <div style={{padding:"8px 16px"}}>
+              {byCust.slice(0,5).map((c, i) => {
+                const maxB = byCust[0]?.budget || 1;
+                const pct = (c.budget / maxB) * 100;
+                const colors = [C.teal, "#2D8EBB", C.green, C.amber, C.purple];
+                return (
+                  <div key={c.name} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<4?`1px solid ${C.borderLight}`:"none"}}>
+                    <span style={{width:20,height:20,borderRadius:5,background:`${colors[i]}15`,color:colors[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{i+1}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:11,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
+                      <div style={{height:3,background:"#F0F2F5",borderRadius:2,marginTop:3}}>
+                        <div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:colors[i]}}/>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:C.navy}}>{fmt(c.budget)}</div>
+                      <div style={{fontSize:9,color:C.textLight}}>{c.count} projects</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+
+          {/* Portfolio Snapshot */}
+          <SectionCard title="Portfolio Snapshot" subtitle="Key metrics at a glance">
+            <div style={{padding:"12px 16px"}}>
+              {[
+                {label:"Active Projects",value:activeCount,total:(projects||[]).length,color:C.green},
+                {label:"With Work Orders",value:(projects||[]).filter(p=>(p.WorkOrderCount||0)>0).length,total:(projects||[]).length,color:C.teal},
+                {label:"With Hours Logged",value:(projects||[]).filter(p=>(p.HoursLogged||0)>0).length,total:(projects||[]).length,color:C.amber},
+                {label:"With Actual Cost",value:(projects||[]).filter(p=>(p.ActualCost||0)>0).length,total:(projects||[]).length,color:C.purple},
+              ].map((m,i)=>{
+                const pct = m.total>0?(m.value/m.total*100):0;
+                return (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:i<3?`1px solid ${C.borderLight}`:"none"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:11,fontWeight:600,color:C.text}}>{m.label}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
+                        <div style={{flex:1,height:4,background:"#F0F2F5",borderRadius:2}}><div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:m.color}}/></div>
+                        <span style={{fontSize:10,fontWeight:700,color:m.color}}>{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div style={{fontSize:14,fontWeight:800,color:C.navy}}>{m.value}<span style={{fontSize:10,fontWeight:400,color:C.textLight}}>/{m.total}</span></div>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+        </div>
       </div>
 
       {/* Status + Customer Charts */}
