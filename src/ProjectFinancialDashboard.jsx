@@ -384,35 +384,64 @@ function TaskCodesPage({ tasks }) {
         <KpiCard label="Project Assignments" value={totalProjects} icon="◫" barPct={70} barColor={C.amber}/>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:22}}>
-        <SectionCard title="Budget by Task Code" subtitle="Actual spend across task codes">
-          <div style={{padding:16}}>
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart margin={{top:10,bottom:5}}>
-                <Pie data={pieData.slice(0,8)} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} innerRadius={40} paddingAngle={3} cornerRadius={3}
-                  labelLine={false} label={({cx,cy,midAngle,innerRadius,outerRadius,percent})=>{
-                    const R=Math.PI/180;const r=innerRadius+(outerRadius-innerRadius)*0.5;const x=cx+r*Math.cos(-midAngle*R);const y=cy+r*Math.sin(-midAngle*R);
-                    return percent>0.08?<text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" style={{fontSize:9,fontWeight:800}}>{`${(percent*100).toFixed(0)}%`}</text>:null;
-                  }}>{pieData.slice(0,8).map((e,i)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]} stroke="none"/>)}</Pie>
-                <Legend wrapperStyle={{fontSize:9}} iconType="plainline" iconSize={12}/>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
+      {/* Smart Donut with "Other" expansion — full width */}
+      <SectionCard title="Spend by Task Code" subtitle="Top codes shown individually · smaller codes grouped as Other" style={{marginBottom:22}}>
+        {(() => {
+          const sorted = (tasks||[]).filter(t=>(t.ActualCost||0)>0).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0));
+          const top6 = sorted.slice(0, 6);
+          const others = sorted.slice(6);
+          const othersTotal = others.reduce((s,t) => s + (t.ActualCost||0), 0);
+          const chartData = top6.map(t => ({name:`${t.Code} — ${(t.Description||"").slice(0,22)}`,code:t.Code,desc:t.Description||"",value:t.ActualCost||0,projects:t.ProjectCount||0}));
+          if (othersTotal > 0) chartData.push({name:`Other (${others.length})`,code:"Other",desc:"Other codes",value:othersTotal,projects:others.reduce((s,t)=>s+(t.ProjectCount||0),0)});
+          const total = chartData.reduce((s,d) => s + d.value, 0);
+          const colors = [...CHART_COLORS];
+          return (
+            <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:0}}>
+              <div style={{padding:20,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRight:`1px solid ${C.borderLight}`}}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart><Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={105} innerRadius={58} paddingAngle={3} cornerRadius={4}
+                    labelLine={false} label={({cx,cy,midAngle,outerRadius:or,percent})=>{
+                      if(percent<0.04) return null;const R=Math.PI/180;const r=or+16;const x=cx+r*Math.cos(-midAngle*R);const y=cy+r*Math.sin(-midAngle*R);
+                      return <text x={x} y={y} fill={C.text} textAnchor={x>cx?"start":"end"} dominantBaseline="central" style={{fontSize:10,fontWeight:700}}>{`${(percent*100).toFixed(0)}%`}</text>;
+                    }}>{chartData.map((e,i)=><Cell key={i} fill={e.code==="Other"?"#737A82":colors[i%colors.length]} stroke="none"/>)}</Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{textAlign:"center",marginTop:-5}}><div style={{fontSize:10,color:C.textLight}}>Total Actual Spend</div><div style={{fontSize:22,fontWeight:800,color:C.navy}}>{fmt(total)}</div></div>
+              </div>
+              <div style={{padding:"16px 20px",overflowY:"auto",maxHeight:360}}>
+                {chartData.map((d,i) => {
+                  const pct = total>0 ? d.value/total*100 : 0;
+                  const maxVal = chartData[0]?.value||1;
+                  const barW = (d.value/maxVal)*100;
+                  const c = d.code==="Other"?"#737A82":colors[i%colors.length];
+                  return (
+                    <div key={d.code+i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`}}>
+                      <span style={{width:12,height:12,borderRadius:3,background:c,flexShrink:0}}/>
+                      <div style={{flex:"0 0 180px",minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.code==="Other"?`Other (${others.length} codes)`:d.desc||d.code}</div><div style={{fontSize:10,color:C.textLight}}>Code: {d.code} · {d.projects} projects</div></div>
+                      <div style={{flex:1,height:8,background:"#F0F2F5",borderRadius:4,overflow:"hidden"}}><div style={{width:`${barW}%`,height:"100%",borderRadius:4,background:`linear-gradient(90deg, ${c}BB, ${c})`}}/></div>
+                      <div style={{textAlign:"right",minWidth:65}}><div style={{fontSize:13,fontWeight:700,color:C.navy}}>{fmt(d.value)}</div><div style={{fontSize:10,color:C.textLight}}>{pct.toFixed(1)}%</div></div>
+                    </div>
+                  );
+                })}
+                {others.length > 0 && (
+                  <div style={{marginTop:10,padding:"10px 14px",background:"#FAFBFC",borderRadius:8,border:`1px solid ${C.borderLight}`}}>
+                    <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Other Breakdown ({others.length} codes)</div>
+                    <div style={{maxHeight:100,overflowY:"auto"}}>
+                      {others.map(t => (
+                        <div key={t.Code} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:11,borderBottom:`1px solid ${C.borderLight}`}}>
+                          <span style={{color:C.textMid}}><strong style={{color:C.teal}}>{t.Code}</strong> — {(t.Description||"").slice(0,35)}</span>
+                          <span style={{fontWeight:600,color:C.navy,flexShrink:0,marginLeft:8}}>{fmt(t.ActualCost||0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </SectionCard>
 
-        <SectionCard title="Budget by Code" subtitle="Top codes by actual spend">
-          <div style={{padding:16}}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={(tasks||[]).filter(t=>t.ActualCost>0).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0)).slice(0,10)} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
-                <XAxis type="number" tickFormatter={v=>fmt(v)} style={{fontSize:9}} axisLine={false} tickLine={false}/>
-                <YAxis type="category" dataKey="Code" style={{fontSize:10}} axisLine={false} tickLine={false} width={50}/>
-                <Tooltip content={<ChartTooltip/>}/>
-                <Bar dataKey="ActualCost" fill={C.teal} radius={[0,4,4,0]} barSize={14} name="Budget"/>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
-      </div>
 
       <SectionCard title="All Task Codes" subtitle="From AcumaticaDB PMTask · Sorted by actual spend">
         <table style={{width:"100%",borderCollapse:"collapse"}}>
