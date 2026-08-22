@@ -174,7 +174,7 @@ router.get('/tasks', async (req, res) => {
       JOIN AcumaticaDB.dbo.Contract c ON t.ProjectID = c.ContractID AND t.CompanyID = 2
       WHERE c.CompanyID = 2 AND c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
       GROUP BY t.TaskCD, t.Description
-      ORDER BY t.TaskCD
+      ORDER BY ActualCost DESC
     `);
     res.json(result.recordset);
   } catch (e) { console.error('Tasks error:', e.message); res.status(500).json({ error: e.message }); }

@@ -103,7 +103,7 @@ function OverviewPage({ user, projects, dashboard }) {
   const activeCount = (projects||[]).filter(p => p.Status === "A").length;
 
   // Top projects by budget
-  const topProjects = useMemo(() => [...(projects||[])].sort((a,b) => (b.Budget||0)-(a.Budget||0)).slice(0,8), [projects]);
+  const topProjects = useMemo(() => [...(projects||[])].sort((a,b) => (b.ActualCost||b.RevisedBudget||0)-(a.ActualCost||a.RevisedBudget||0)).slice(0,8), [projects]);
 
   // By PM
   const byPM = useMemo(() => {
@@ -161,10 +161,10 @@ function OverviewPage({ user, projects, dashboard }) {
       {/* Two Column */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,marginBottom:22}}>
         {/* Budget Performance List */}
-        <SectionCard title="Budget performance" subtitle="Top projects by estimated budget">
+        <SectionCard title="Budget performance" subtitle="Top projects by actual spend">
           <div style={{maxHeight:380,overflowY:"auto"}}>
             {topProjects.map(p => {
-              const taskPct = (p.RevisedBudget||p.CostBudget||1) > 0 ? (p.ActualCost||0)/(p.RevisedBudget||p.CostBudget||1)*100 : (p.ActualCost>0?50:0);
+              const taskPct = (p.RevisedBudget||p.CostBudget||1) > 0 ? Math.min((p.ActualCost||0)/(p.RevisedBudget||p.CostBudget||1)*100, 100) : (p.ActualCost>0?50:0);
               return (<div key={p.Id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer"}}
                 onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{flex:"0 0 260px"}}>
@@ -181,7 +181,7 @@ function OverviewPage({ user, projects, dashboard }) {
                   <span style={{fontSize:11,color:C.textLight,minWidth:55}}>{fmtPct(taskPct)}</span>
                 </div>
                 <div style={{textAlign:"right",minWidth:80}}>
-                  <div style={{fontSize:15,fontWeight:700,color:C.navy}}>{fmt(p.RevisedBudget)}</div>
+                  <div style={{fontSize:15,fontWeight:700,color:C.navy}}>{fmt(p.ActualCost||p.RevisedBudget)}</div>
                   <div style={{fontSize:10,color:C.textLight}}>{p.ProjectManager?.split(" ")[0]||""}</div>
                 </div>
                 <span style={{color:C.textLight}}>›</span>
@@ -244,7 +244,7 @@ function OverviewPage({ user, projects, dashboard }) {
 // PROJECTS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function ProjectsPage({ projects }) {
-  const [sortKey, setSortKey] = useState("Budget");
+  const [sortKey, setSortKey] = useState("ActualCost");
   const [sortDir, setSortDir] = useState("desc");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -305,6 +305,16 @@ function ProjectsPage({ projects }) {
                 <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,textAlign:"center"}}>{p.WorkOrderCount||0}</td>
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid,textAlign:"center"}}>{p.IsTM?"✓":"—"}</td>
               </tr>))}
+              {/* Totals Row */}
+              <tr style={{background:"#F0F4F8",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
+                <td style={{padding:"12px 12px",fontSize:12}} colSpan={4}>TOTAL ({sorted.length} projects)</td>
+                <td style={{padding:"12px 12px"}}></td>
+                <td style={{padding:"12px 12px",fontSize:12,textAlign:"right",color:C.navy}}>{fmt(sorted.reduce((s,p)=>s+(p.RevisedBudget||0),0))}</td>
+                <td style={{padding:"12px 12px",fontSize:12,textAlign:"right",color:C.navy}}>{fmt(sorted.reduce((s,p)=>s+(p.ActualCost||0),0))}</td>
+                <td style={{padding:"12px 12px",fontSize:12,textAlign:"right"}}>{fmtHrs(sorted.reduce((s,p)=>s+(p.HoursLogged||0),0))}</td>
+                <td style={{padding:"12px 12px",fontSize:12,textAlign:"center"}}>{sorted.reduce((s,p)=>s+(p.WorkOrderCount||0),0)}</td>
+                <td></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -404,12 +414,12 @@ function TaskCodesPage({ tasks }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="All Task Codes" subtitle="From FAST database TaskCodes + ACUM_ProjectTask">
+      <SectionCard title="All Task Codes" subtitle="From AcumaticaDB PMTask · Sorted by actual spend">
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead><tr style={{background:"#FAFBFC"}}>{["Code","Description","Projects","Assignments","Actual Spend","Qty"].map((h,i)=>(
             <th key={i} style={{padding:"10px 16px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,color:C.textLight,textAlign:i>1?"right":"left",borderBottom:`1px solid ${C.border}`}}>{h}</th>
           ))}</tr></thead>
-          <tbody>{(tasks||[]).map(t=>(
+          <tbody>{(tasks||[]).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0)).map(t=>(
             <tr key={t.Code} style={{borderBottom:`1px solid ${C.borderLight}`}}>
               <td style={{padding:"12px 16px"}}><span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:700,background:C.teal,color:"#fff"}}>{t.Code}</span></td>
               <td style={{padding:"12px 16px",fontSize:13,fontWeight:600,color:C.text}}>{t.Description||"—"}</td>
@@ -431,12 +441,12 @@ function TaskCodesPage({ tasks }) {
 function ForecastPage({ projects, monthly }) {
   const totalBudget = (projects||[]).reduce((s,p) => s + (p.RevisedBudget||0), 0);
   const totalTask = (projects||[]).reduce((s,p) => s + (p.ActualCost||0), 0);
-  const topByBudget = [...(projects||[])].sort((a,b)=>(b.Budget||0)-(a.Budget||0)).slice(0,20);
+  const topByBudget = [...(projects||[])].sort((a,b)=>(b.ActualCost||b.RevisedBudget||0)-(a.ActualCost||a.RevisedBudget||0)).slice(0,20);
 
   // Scatter: budget vs hours
   const scatter = topByBudget.filter(p=>((p.RevisedBudget||0)>0||(p.ActualCost||0)>0)).map(p=>({
     name: p.Name?.length>20?p.Name.slice(0,18)+"…":p.Name,
-    x: p.RevisedBudget||p.ActualCost||0, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
+    x: p.ActualCost||p.RevisedBudget||0, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
   }));
 
   // By customer
@@ -499,7 +509,7 @@ function ForecastPage({ projects, monthly }) {
           <ResponsiveContainer width="100%" height={280}>
             <ScatterChart margin={{top:10,right:10,left:-10,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight}/>
-              <XAxis type="number" dataKey="x" name="Budget" tickFormatter={v=>fmt(v)} style={{fontSize:10}} axisLine={false}/>
+              <XAxis type="number" dataKey="x" name="Actual Cost" tickFormatter={v=>v>=1e6?`$${(v/1e6).toFixed(1)}M`:v>=1e3?`$${(v/1e3).toFixed(0)}K`:`$${v}`} style={{fontSize:10}} axisLine={false}/>
               <YAxis type="number" dataKey="y" name="Hours" style={{fontSize:10}} axisLine={false}/>
               <ZAxis type="number" dataKey="z" range={[30,200]}/>
               <Tooltip content={({active,payload})=>{if(!active||!payload?.length)return null;const d=payload[0].payload;
