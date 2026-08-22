@@ -606,6 +606,17 @@ function ForecastPage({ projects, monthly }) {
                     <Bar dataKey="OvertimeHours" stackId="hrs" fill="url(#gOT)" radius={[3,3,0,0]} name="Overtime"/>
                   </BarChart>
                 </ResponsiveContainer>
+                {/* Legend */}
+                <div style={{display:"flex",justifyContent:"center",gap:24,marginTop:10,paddingTop:10,borderTop:`1px solid ${C.borderLight}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:14,height:10,borderRadius:2,background:`linear-gradient(180deg, ${C.teal}E6, ${C.teal}80)`}}/>
+                    <span style={{fontSize:11,fontWeight:600,color:C.textMid}}>Regular Hours</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:14,height:10,borderRadius:2,background:`linear-gradient(180deg, ${C.amber}E6, ${C.amber}80)`}}/>
+                    <span style={{fontSize:11,fontWeight:600,color:C.textMid}}>Overtime Hours</span>
+                  </div>
+                </div>
               </>);
             })() : <div style={{color:C.textLight,fontSize:12,padding:40,textAlign:"center"}}>Loading monthly data...</div>}
           </div>
