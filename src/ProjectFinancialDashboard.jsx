@@ -433,19 +433,28 @@ function ProjectsPage({ projects }) {
 // TASK CODES PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function TaskCodesPage({ tasks }) {
-  const totalBudget = (tasks||[]).reduce((s,t) => s + (t.ActualCost||0), 0);
-  const totalProjects = (tasks||[]).reduce((s,t) => s + (t.ProjectCount||0), 0);
-  const pieData = (tasks||[]).filter(t=>t.ActualCost>0).map(t=>({name:`${t.Code} ${(t.Description||"").split(" ")[0]}`,value:t.ActualCost}));
+  const sorted = useMemo(() => (tasks||[]).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0)), [tasks]);
+  const withSpend = sorted.filter(t => (t.ActualCost||0) > 0);
+  const totalSpend = sorted.reduce((s,t) => s + (t.ActualCost||0), 0);
+  const totalProjects = sorted.reduce((s,t) => s + (t.ProjectCount||0), 0);
+  const uniqueProjects = new Set(sorted.filter(t=>t.ProjectCount>0).map(t=>t.Code)).size;
+  const avgPerProject = totalProjects > 0 ? totalSpend / totalProjects : 0;
+  const topCode = withSpend[0];
+  const topCodePct = totalSpend > 0 && topCode ? (topCode.ActualCost / totalSpend * 100) : 0;
+  const top3Pct = totalSpend > 0 ? withSpend.slice(0,3).reduce((s,t)=>s+(t.ActualCost||0),0) / totalSpend * 100 : 0;
 
   return (
     <div>
       <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:C.teal,marginBottom:6}}>Resource Management</div>
       <div style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:20}}>Task Code Analysis ({(tasks||[]).length} codes)</div>
 
-      <div style={{display:"flex",gap:16,marginBottom:22}}>
-        <KpiCard label="Total Task Codes" value={(tasks||[]).length} icon="▤" barPct={100} barColor={C.teal}/>
-        <KpiCard label="Actual Spend" value={fmt(totalBudget)} icon="💰" barPct={100} barColor={C.green}/>
-        <KpiCard label="Project Assignments" value={totalProjects} icon="◫" barPct={70} barColor={C.amber}/>
+      {/* KPI Row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5, 1fr)",gap:14,marginBottom:22}}>
+        <KpiCard label="Total Spend" value={fmt(totalSpend)} icon="💰" detail={`Across ${withSpend.length} active codes`} barPct={100} barColor={C.teal}/>
+        <KpiCard label="Avg Spend / Project" value={fmt(avgPerProject)} icon="📊" detail={`${totalProjects} total assignments`} barPct={60} barColor={C.green}/>
+        <KpiCard label="Highest Code" value={topCode?.Code||"—"} sub={topCode?.Description?.slice(0,15)||""} icon="🏆" detail={`${fmt(topCode?.ActualCost||0)} (${fmtPct(topCodePct)})`} barPct={topCodePct} barColor={C.teal}/>
+        <KpiCard label="Top 3 Concentration" value={fmtPct(top3Pct)} icon="⚡" detail="of total portfolio spend" barPct={top3Pct} barColor={top3Pct>70?C.amber:C.green}/>
+        <KpiCard label="Active Codes" value={withSpend.length} sub={`of ${(tasks||[]).length} total`} icon="▤" barPct={withSpend.length/(tasks||[{length:1}]).length*100} barColor={C.purple}/>
       </div>
 
       {/* Smart Donut with "Other" expansion — full width */}
@@ -507,21 +516,47 @@ function TaskCodesPage({ tasks }) {
       </SectionCard>
 
 
-      <SectionCard title="All Task Codes" subtitle="From AcumaticaDB PMTask · Sorted by actual spend">
+      <SectionCard title="All Task Codes" subtitle="Sorted by actual spend · showing per-project averages and portfolio share">
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:"#FAFBFC"}}>{["Code","Description","Projects","Assignments","Actual Spend","Qty"].map((h,i)=>(
-            <th key={i} style={{padding:"10px 16px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,color:C.textLight,textAlign:i>1?"right":"left",borderBottom:`1px solid ${C.border}`}}>{h}</th>
+          <thead><tr style={{background:"#FAFBFC"}}>{["","Code","Description","Projects","Actual Spend","Spend / Project","Share","Distribution"].map((h,i)=>(
+            <th key={i} style={{padding:"10px 14px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:C.textLight,textAlign:i>=3?"right":"left",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
           ))}</tr></thead>
-          <tbody>{(tasks||[]).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0)).map(t=>(
-            <tr key={t.Code} style={{borderBottom:`1px solid ${C.borderLight}`}}>
-              <td style={{padding:"12px 16px"}}><span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:700,background:C.teal,color:"#fff"}}>{t.Code}</span></td>
-              <td style={{padding:"12px 16px",fontSize:13,fontWeight:600,color:C.text}}>{t.Description||"—"}</td>
-              <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.ProjectCount||0}</td>
-              <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.TaskAssignments||0}</td>
-              <td style={{padding:"12px 16px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(t.ActualCost||0)}</td>
-              <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{Math.round(t.TotalQuantity||0).toLocaleString()}</td>
-            </tr>
-          ))}</tbody>
+          <tbody>{sorted.filter(t=>(t.ActualCost||0)>0).map((t, i) => {
+            const spend = t.ActualCost||0;
+            const projCount = t.ProjectCount||1;
+            const perProject = spend / projCount;
+            const sharePct = totalSpend > 0 ? (spend / totalSpend * 100) : 0;
+            const maxSpend = withSpend[0]?.ActualCost || 1;
+            const barW = (spend / maxSpend) * 100;
+            const colors = [C.teal, "#2D8EBB", C.green, C.amber, C.purple, "#E91E63", "#00BCD4", C.blue];
+            const c = colors[i % colors.length];
+            return (
+            <tr key={t.Code+i} style={{borderBottom:`1px solid ${C.borderLight}`}}
+              onMouseEnter={e=>e.currentTarget.style.background="#FAFBFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <td style={{padding:"10px 10px",width:30}}><span style={{width:20,height:20,borderRadius:5,background:`${c}15`,color:c,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800}}>{i+1}</span></td>
+              <td style={{padding:"10px 10px"}}><span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:700,background:C.teal,color:"#fff"}}>{t.Code}</span></td>
+              <td style={{padding:"10px 14px",fontSize:12,fontWeight:600,color:C.text,maxWidth:250,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.Description||"—"}</td>
+              <td style={{padding:"10px 14px",fontSize:12,color:C.textMid,textAlign:"right"}}>{projCount}</td>
+              <td style={{padding:"10px 14px",fontSize:13,fontWeight:700,color:C.navy,textAlign:"right"}}>{fmt(spend)}</td>
+              <td style={{padding:"10px 14px",fontSize:12,fontWeight:600,color:C.teal,textAlign:"right"}}>{fmt(perProject)}</td>
+              <td style={{padding:"10px 14px",fontSize:11,fontWeight:600,color:sharePct>10?C.teal:C.textLight,textAlign:"right"}}>{fmtPct(sharePct)}</td>
+              <td style={{padding:"10px 14px",width:140}}>
+                <div style={{height:6,background:"#F0F2F5",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{width:`${barW}%`,height:"100%",borderRadius:3,background:`linear-gradient(90deg, ${c}BB, ${c})`}}/>
+                </div>
+              </td>
+            </tr>);
+          })}
+          {/* Totals */}
+          <tr style={{background:"#F0F4F8",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
+            <td colSpan={3} style={{padding:"12px 14px",fontSize:12}}>TOTAL ({withSpend.length} active codes)</td>
+            <td style={{padding:"12px 14px",fontSize:12,textAlign:"right"}}>{totalProjects}</td>
+            <td style={{padding:"12px 14px",fontSize:13,textAlign:"right",color:C.navy}}>{fmt(totalSpend)}</td>
+            <td style={{padding:"12px 14px",fontSize:12,textAlign:"right",color:C.teal}}>{fmt(avgPerProject)}</td>
+            <td style={{padding:"12px 14px",fontSize:11,textAlign:"right"}}>100%</td>
+            <td></td>
+          </tr>
+          </tbody>
         </table>
       </SectionCard>
     </div>
