@@ -141,7 +141,7 @@ function OverviewPage({ user, projects, dashboard }) {
 
       {/* KPIs */}
       <div style={{display:"flex",gap:16,marginBottom:22}}>
-        <KpiCard label="Revised Budget" value={fmt(totalBudget)} sub={`${(projects||[]).length} projects`} barPct={100} barColor={C.teal} icon="ℹ" />
+        <KpiCard label="Cost Budget" value={fmt(totalBudget)} sub={`${(projects||[]).length} projects`} barPct={100} barColor={C.teal} icon="ℹ" />
         <KpiCard label="Actual Cost" value={fmt(totalTaskBudget)} detail={`${fmtPct(totalBudget>0?totalTaskBudget/totalBudget*100:0)} spent`} barPct={totalBudget>0?totalTaskBudget/totalBudget*100:0} barColor={C.green} icon="📊" />
         <KpiCard label="Hours Logged" value={fmtHrs(totalHours)} sub="all time" barPct={50} barColor={C.amber} icon="⏱" />
         <KpiCard label="Work Orders" value={totalWO.toLocaleString()} detail={`${completedWO.toLocaleString()} completed (${fmtPct(woPct)})`} barPct={woPct} barColor={C.teal} icon="◫" />

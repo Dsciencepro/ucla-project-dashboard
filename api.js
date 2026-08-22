@@ -8,12 +8,12 @@ router.get('/dashboard', async (req, res) => {
   try {
     const result = await query(`
       SELECT
-        (SELECT COUNT(*) FROM AcumaticaDB.dbo.Contract WHERE NonProject=0 AND IsTemplate=0 AND DeletedDatabaseRecord=0) AS totalProjects,
-        (SELECT ISNULL(SUM(CuryRevisedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='R') AS totalRevisedBudget,
-        (SELECT ISNULL(SUM(CuryActualAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='E') AS totalActualCost,
-        (SELECT ISNULL(SUM(CuryCommittedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='E') AS totalCommitted,
-        (SELECT ISNULL(SUM(CuryInvoicedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='R') AS totalInvoiced,
-        (SELECT ISNULL(SUM(CuryChangeOrderAmount),0) FROM AcumaticaDB.dbo.PMBudget) AS totalChangeOrders,
+        (SELECT COUNT(*) FROM AcumaticaDB.dbo.Contract WHERE NonProject=0 AND IsTemplate=0 AND DeletedDatabaseRecord=0 AND CompanyID=2) AS totalProjects,
+        (SELECT ISNULL(SUM(CuryRevisedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='E' AND CompanyID=2) AS totalCostBudget,
+        (SELECT ISNULL(SUM(CuryActualAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='E' AND CompanyID=2) AS totalActualCost,
+        (SELECT ISNULL(SUM(CuryCommittedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='E' AND CompanyID=2) AS totalCommitted,
+        (SELECT ISNULL(SUM(CuryInvoicedAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE Type='R' AND CompanyID=2) AS totalInvoiced,
+        (SELECT ISNULL(SUM(CuryChangeOrderAmount),0) FROM AcumaticaDB.dbo.PMBudget WHERE CompanyID=2) AS totalChangeOrders,
         (SELECT COUNT(*) FROM FAST.dbo.WorkOrders) AS totalWorkOrders,
         (SELECT ISNULL(SUM(CAST(DATEDIFF(MINUTE,StartTime,EndTime) AS float)/60.0),0) FROM FAST.dbo.EmployeeTimesheets) AS totalHoursLogged,
         (SELECT COUNT(DISTINCT EmployeeId) FROM FAST.dbo.EmployeeTimesheets) AS activeEmployees,
@@ -66,7 +66,7 @@ router.get('/projects', async (req, res) => {
           SUM(CuryRevisedAmount) AS RevisedBudget,
           SUM(CuryInvoicedAmount) AS InvoicedAmount,
           SUM(CuryChangeOrderAmount) AS ChangeOrderAmt
-        FROM AcumaticaDB.dbo.PMBudget WHERE Type = 'R'
+        FROM AcumaticaDB.dbo.PMBudget WHERE Type = 'R' AND CompanyID = 2
         GROUP BY ProjectID
       ) rev ON c.ContractID = rev.ProjectID
       -- Cost aggregation
@@ -76,7 +76,7 @@ router.get('/projects', async (req, res) => {
           SUM(CuryActualAmount) AS ActualCost,
           SUM(CuryCommittedAmount) AS CommittedCost,
           SUM(CuryChangeOrderAmount) AS CostChangeOrders
-        FROM AcumaticaDB.dbo.PMBudget WHERE Type = 'E'
+        FROM AcumaticaDB.dbo.PMBudget WHERE Type = 'E' AND CompanyID = 2
         GROUP BY ProjectID
       ) cost ON c.ContractID = cost.ProjectID
       -- FAST hours via project number
@@ -96,7 +96,7 @@ router.get('/projects', async (req, res) => {
           SUM(CASE WHEN Status='Completed' THEN 1 ELSE 0 END) AS CompletedWO
         FROM FAST.dbo.WorkOrders GROUP BY ProjectNo
       ) wo ON c.ContractCD = wo.ProjectNo
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
+      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
       ORDER BY c.ContractID DESC
     `);
     res.json(result.recordset);
@@ -172,7 +172,7 @@ router.get('/tasks', async (req, res) => {
       FROM AcumaticaDB.dbo.PMTask t
       LEFT JOIN AcumaticaDB.dbo.PMBudget b ON t.ProjectID = b.ProjectID AND t.TaskID = b.ProjectTaskID
       JOIN AcumaticaDB.dbo.Contract c ON t.ProjectID = c.ContractID
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
+      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
       GROUP BY t.TaskCD, t.Description
       ORDER BY t.TaskCD
     `);
@@ -236,7 +236,7 @@ router.get('/financial/monthly', async (req, res) => {
         SUM(h.FinPTDAmount) AS Amount, SUM(h.FinPTDQty) AS Qty
       FROM AcumaticaDB.dbo.PMHistory h
       JOIN AcumaticaDB.dbo.Contract c ON h.ProjectID = c.ContractID
-      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0
+      WHERE c.NonProject = 0 AND c.IsTemplate = 0 AND c.DeletedDatabaseRecord = 0 AND c.CompanyID = 2
         AND h.PeriodID >= FORMAT(DATEADD(MONTH,-12,GETDATE()),'yyyyMM')
       GROUP BY h.PeriodID ORDER BY h.PeriodID
     `);
