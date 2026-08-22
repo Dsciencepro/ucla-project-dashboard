@@ -8,18 +8,18 @@ import {
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const C = {
-  sidebar: "#0C2340", sidebarActive: "#1E4D7B", gold: "#FFD100",
-  bg: "#F4F6F9", surface: "#FFFFFF", navy: "#0C2340",
+  sidebar: "#101B2A", sidebarActive: "#252B31", gold: "#F26A21",
+  bg: "#F4F5F6", surface: "#FFFFFF", navy: "#0B0D0F",
   text: "#1A1A2E", textMid: "#4A5568", textLight: "#8896A6",
   border: "#E8ECF1", borderLight: "#F0F2F5",
-  teal: "#0077B6", tealLight: "#00B4D8", green: "#10B981",
+  teal: "#F26A21", tealLight: "#F4895B", green: "#10B981",
   greenBg: "#ECFDF5", amber: "#F59E0B", amberBg: "#FFF8E1",
   red: "#EF4444", redBg: "#FFF0F0", purple: "#8B5CF6", purpleBg: "#F5F3FF",
   blue: "#3B82F6",
 };
-const CHART_COLORS = [C.teal, C.green, C.amber, C.purple, C.blue, C.red, "#E91E63", "#00BCD4"];
+const CHART_COLORS = [C.teal, "#2D8EBB", C.green, C.amber, C.purple, "#E91E63", "#00BCD4", C.blue];
 const statusMap = {
-  "A": { label: "Active", dot: C.green, bg: C.greenBg, text: "#047857" },
+  "A": { label: "Active", dot: "#2D8EBB", bg: C.greenBg, text: "#047857" },
   "Awarded": { label: "Awarded", dot: C.teal, bg: "#E0F7FA", text: "#006064" },
   "In Planning": { label: "In Planning", dot: C.amber, bg: C.amberBg, text: "#92400E" },
   "F": { label: "Finished", dot: C.textLight, bg: "#F1F5F9", text: "#475569" },
@@ -444,10 +444,10 @@ function ForecastPage({ projects, monthly }) {
   const topByBudget = [...(projects||[])].sort((a,b)=>(b.ActualCost||b.RevisedBudget||0)-(a.ActualCost||a.RevisedBudget||0)).slice(0,20);
 
   // Scatter: budget vs hours
-  const scatter = topByBudget.filter(p=>((p.RevisedBudget||0)>0||(p.ActualCost||0)>0)).map(p=>({
+  const scatter = (projects||[]).filter(p=>(p.ActualCost||0)>0||(p.HoursLogged||0)>0||(p.WorkOrderCount||0)>0).map(p=>({
     name: p.Name?.length>20?p.Name.slice(0,18)+"…":p.Name,
-    x: p.ActualCost||p.RevisedBudget||0, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
-  }));
+    x: (p.ActualCost||0)/1000, y: p.WorkOrderCount||0, z: Math.max(p.HoursLogged||1, 1), status: p.Status,
+  })).slice(0,40);
 
   // By customer
   const byCust = useMemo(() => {
@@ -504,18 +504,18 @@ function ForecastPage({ projects, monthly }) {
       </div>
 
       {/* Scatter */}
-      <SectionCard title="Project Map" subtitle="Budget vs hours logged — bubble size = work orders">
+      <SectionCard title="Project Activity Map" subtitle="Actual cost vs work orders — bubble size = hours logged">
         <div style={{padding:16}}>
           <ResponsiveContainer width="100%" height={280}>
             <ScatterChart margin={{top:10,right:10,left:-10,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight}/>
-              <XAxis type="number" dataKey="x" name="Actual Cost" tickFormatter={v=>v>=1e6?`$${(v/1e6).toFixed(1)}M`:v>=1e3?`$${(v/1e3).toFixed(0)}K`:`$${v}`} style={{fontSize:10}} axisLine={false}/>
-              <YAxis type="number" dataKey="y" name="Hours" style={{fontSize:10}} axisLine={false}/>
-              <ZAxis type="number" dataKey="z" range={[30,200]}/>
+              <XAxis type="number" dataKey="x" name="Actual Cost ($K)" tickFormatter={v=>v>=1e3?`$${(v/1e3).toFixed(0)}M`:`$${v.toFixed(0)}K`} style={{fontSize:10}} axisLine={false}/>
+              <YAxis type="number" dataKey="y" name="Work Orders" style={{fontSize:10}} axisLine={false}/>
+              <ZAxis type="number" dataKey="z" range={[20,300]}/>
               <Tooltip content={({active,payload})=>{if(!active||!payload?.length)return null;const d=payload[0].payload;
                 return <div style={{background:C.navy,padding:"10px 14px",borderRadius:8}}><div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{d.name}</div>
                   <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:4}}>Budget: {fmt(d.x)}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Hours: {Math.round(d.y)}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Work Orders: {d.y}</div>
                   <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Work Orders: {d.z}</div></div>;}}/>
               <Scatter data={scatter} fill={C.teal}>{scatter.map((s,i)=><Cell key={i} fill={statusMap[s.status]?.dot||C.teal} fillOpacity={0.7}/>)}</Scatter>
             </ScatterChart>
@@ -581,7 +581,7 @@ export default function ProjectFinancialDashboard({ user, onLogout }) {
       {/* Sidebar */}
       <div style={{width:220,background:C.sidebar,display:"flex",flexDirection:"column",position:"fixed",top:0,left:0,bottom:0,zIndex:10}}>
         <div style={{padding:"22px 20px 18px",display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:34,height:34,borderRadius:8,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:C.navy,fontFamily:"Georgia, serif"}}>T</div>
+          <div style={{width:48,height:34,borderRadius:6,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#fff",fontFamily:"Inter, sans-serif",letterSpacing:1}}>TQF</div>
           <div><div style={{fontSize:14,fontWeight:700,color:"#fff"}}>TQF Portfolio</div><div style={{fontSize:10,color:"rgba(255,255,255,0.45)"}}>The Quality Firm</div></div>
         </div>
         <div style={{padding:"8px 12px"}}>

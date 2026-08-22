@@ -54,11 +54,11 @@ export default function LoginPage({ onLogin }) {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             width: 72, height: 48, borderRadius: 10,
-            background: "#2774AE",
+            background: "#F26A21",
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 18px", fontSize: 20, letterSpacing: 3,
-            color: "#FFD100", fontWeight: 800, fontFamily: "'Georgia', serif",
-            boxShadow: "0 4px 14px rgba(39,116,174,0.35)",
+            color: "#fff", fontWeight: 800, fontFamily: "'Georgia', serif",
+            boxShadow: "0 4px 14px rgba(242,106,33,0.35)",
           }}>UCLA</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.navy }}>Project Financial Dashboard</div>
           <div style={{ fontSize: 13, color: C.slate, marginTop: 4 }}>Sign in to continue</div>
