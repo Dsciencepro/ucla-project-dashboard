@@ -8,22 +8,22 @@ import {
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const C = {
-  sidebar: "#101B2A", sidebarActive: "#252B31", gold: "#F26A21",
-  bg: "#F4F5F6", surface: "#FFFFFF", navy: "#0B0D0F",
-  text: "#1A1A2E", textMid: "#4A5568", textLight: "#8896A6",
-  border: "#E8ECF1", borderLight: "#F0F2F5",
+  sidebar: "#08090C", sidebarActive: "#1A1D24", gold: "#F26A21",
+  bg: "#0E1117", surface: "#161920", navy: "#FFFFFF",
+  text: "#F0F1F3", textMid: "#9CA3AF", textLight: "#5C6370",
+  border: "#252830", borderLight: "#1E2128",
   teal: "#F26A21", tealLight: "#F4895B", green: "#10B981",
-  greenBg: "#ECFDF5", amber: "#F59E0B", amberBg: "#FFF8E1",
-  red: "#EF4444", redBg: "#FFF0F0", purple: "#8B5CF6", purpleBg: "#F5F3FF",
+  greenBg: "#0D2818", amber: "#F59E0B", amberBg: "#2A1F00",
+  red: "#EF4444", redBg: "#2A0F0F", purple: "#8B5CF6", purpleBg: "#1A1230",
   blue: "#3B82F6",
 };
 const CHART_COLORS = [C.teal, "#2D8EBB", C.green, C.amber, C.purple, "#E91E63", "#00BCD4", C.blue];
 const statusMap = {
-  "A": { label: "Active", dot: "#2D8EBB", bg: C.greenBg, text: "#047857" },
-  "Awarded": { label: "Awarded", dot: C.teal, bg: "#E0F7FA", text: "#006064" },
-  "In Planning": { label: "In Planning", dot: C.amber, bg: C.amberBg, text: "#92400E" },
-  "F": { label: "Finished", dot: C.textLight, bg: "#F1F5F9", text: "#475569" },
-  "L": { label: "Closed", dot: C.textLight, bg: "#F1F5F9", text: "#475569" },
+  "A": { label: "Active", dot: "#10B981", bg: "#0D281820", text: "#34D399" },
+  "Awarded": { label: "Awarded", dot: C.teal, bg: "#F26A2118", text: "#F4895B" },
+  "In Planning": { label: "In Planning", dot: C.amber, bg: "#F59E0B18", text: "#FBBF24" },
+  "F": { label: "Finished", dot: "#5C6370", bg: "#25283018", text: "#9CA3AF" },
+  "L": { label: "Closed", dot: "#5C6370", bg: "#25283018", text: "#9CA3AF" },
 };
 const fmt = (v) => { if (v == null) return "—"; const a = Math.abs(v); if (a >= 1e6) return `$${(v/1e6).toFixed(2)}M`; if (a >= 1e3) return `$${(v/1e3).toFixed(0)}K`; return `$${v.toFixed(0)}`; };
 const fmtPct = (v) => `${v.toFixed(1)}%`;
@@ -36,12 +36,12 @@ function NavItem({ icon, label, active, badge, onClick }) {
     {badge && <span style={{background:C.gold,color:C.navy,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10}}>{badge}</span>}
   </div>);
 }
-function MiniBar({ pct, color }) { return (<div style={{height:4,background:"#E8ECF1",borderRadius:2,marginTop:10}}><div style={{width:`${Math.min(pct||0,100)}%`,height:"100%",borderRadius:2,background:color||C.teal}}/></div>); }
+function MiniBar({ pct, color }) { return (<div style={{height:4,background:"#252830",borderRadius:2,marginTop:10}}><div style={{width:`${Math.min(pct||0,100)}%`,height:"100%",borderRadius:2,background:color||C.teal}}/></div>); }
 function KpiCard({ label, value, sub, detail, barPct, barColor, icon }) {
   return (<div style={{background:C.surface,borderRadius:10,padding:"20px 22px",flex:"1 1 0",border:`1px solid ${C.border}`,minWidth:180}}>
     <div style={{display:"flex",justifyContent:"space-between"}}><div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:C.textLight}}>{label}</div><span style={{fontSize:14,color:C.textLight}}>{icon}</span></div>
     <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:10}}><span style={{fontSize:26,fontWeight:800,color:C.navy,letterSpacing:-1}}>{value}</span>{sub&&<span style={{fontSize:11,color:C.textLight}}>{sub}</span>}</div>
-    {detail&&<div style={{fontSize:11,color:C.green,fontWeight:600,marginTop:5}}>{detail}</div>}{barPct!=null&&<MiniBar pct={barPct} color={barColor}/>}
+    {detail&&<div style={{fontSize:11,color:"#34D399",fontWeight:600,marginTop:5}}>{detail}</div>}{barPct!=null&&<MiniBar pct={barPct} color={barColor}/>}
   </div>);
 }
 function ChartTooltip({ active, payload, label }) {
@@ -61,7 +61,7 @@ function SectionCard({ title, subtitle, children, style: sx }) {
   </div>);
 }
 function StatusPill({ status }) {
-  const s = statusMap[status] || { label: status, dot: C.textLight, bg: "#F1F5F9", text: "#475569" };
+  const s = statusMap[status] || { label: status, dot: C.textLight, bg: "#1E2128", text: "#475569" };
   return (<span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:s.text,background:s.bg,padding:"3px 10px",borderRadius:10}}>
     <span style={{width:5,height:5,borderRadius:"50%",background:s.dot}}/>{s.label}
   </span>);
@@ -129,13 +129,13 @@ function OverviewPage({ user, projects, dashboard }) {
   return (
     <div>
       {/* DB Status */}
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 18px",background:"#F0FDF9",borderRadius:10,marginBottom:20,border:"1px solid #A7F3D0"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 18px",background:"#0D281820",borderRadius:10,marginBottom:20,border:"1px solid #0D4F2840"}}>
         <div style={{width:10,height:10,borderRadius:"50%",background:C.green,boxShadow:`0 0 8px ${C.green}60`}}/>
         <div style={{flex:1}}>
-          <span style={{fontSize:13,fontWeight:700,color:"#065F46"}}>FAST Database Connected — Live Data</span>
-          <span style={{fontSize:12,color:"#047857",marginLeft:16}}><strong>{dashboard?.totalProjects?.toLocaleString()||"..."}</strong> projects · <strong>{dashboard?.totalWorkOrders?.toLocaleString()||"..."}</strong> work orders · <strong>{Math.round(dashboard?.totalHoursLogged||0).toLocaleString()}</strong> hours</span>
+          <span style={{fontSize:13,fontWeight:700,color:"#34D399"}}>FAST Database Connected — Live Data</span>
+          <span style={{fontSize:12,color:"#34D399",marginLeft:16}}><strong>{dashboard?.totalProjects?.toLocaleString()||"..."}</strong> projects · <strong>{dashboard?.totalWorkOrders?.toLocaleString()||"..."}</strong> work orders · <strong>{Math.round(dashboard?.totalHoursLogged||0).toLocaleString()}</strong> hours</span>
         </div>
-        <span style={{padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:600,background:"#D1FAE5",color:"#065F46"}}>db: FAST</span>
+        <span style={{padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:600,background:"#0D281830",color:"#34D399"}}>db: FAST</span>
       </div>
 
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:24}}>
@@ -160,7 +160,7 @@ function OverviewPage({ user, projects, dashboard }) {
         <div style={{position:"relative",flex:1}}>
           <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:C.textLight}}>⌕</span>
           <input type="text" placeholder="Search project name or number..." value={search} onChange={e=>setSearch(e.target.value)}
-            style={{width:"100%",padding:"8px 12px 8px 32px",fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,outline:"none",color:C.text,background:"#FAFBFC"}}/>
+            style={{width:"100%",padding:"8px 12px 8px 32px",fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,outline:"none",color:C.text,background:"#1A1D24"}}/>
         </div>
         <span style={{fontSize:12,color:C.textLight}}>{filtered.length} results</span>
       </div>
@@ -181,7 +181,7 @@ function OverviewPage({ user, projects, dashboard }) {
               const barColor = colors[i] || C.textLight;
 
               return (<div key={p.Id} style={{padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`}}
-                onMouseEnter={e=>e.currentTarget.style.background="#FAFBFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                onMouseEnter={e=>e.currentTarget.style.background="#1A1D24"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
                     <span style={{width:22,height:22,borderRadius:6,background:`${barColor}15`,color:barColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{i+1}</span>
@@ -200,7 +200,7 @@ function OverviewPage({ user, projects, dashboard }) {
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,height:8,background:"#F0F2F5",borderRadius:4,overflow:"hidden"}}>
+                  <div style={{flex:1,height:8,background:"#1E2128",borderRadius:4,overflow:"hidden"}}>
                     <div style={{width:`${barPct}%`,height:"100%",borderRadius:4,background:`linear-gradient(90deg, ${barColor}CC, ${barColor})`,transition:"width .4s"}}/>
                   </div>
                   <div style={{display:"flex",gap:8,fontSize:10,color:C.textLight,flexShrink:0}}>
@@ -227,7 +227,7 @@ function OverviewPage({ user, projects, dashboard }) {
                     <span style={{width:20,height:20,borderRadius:5,background:`${colors[i]}15`,color:colors[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{i+1}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
-                      <div style={{height:3,background:"#F0F2F5",borderRadius:2,marginTop:3}}>
+                      <div style={{height:3,background:"#1E2128",borderRadius:2,marginTop:3}}>
                         <div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:colors[i]}}/>
                       </div>
                     </div>
@@ -256,7 +256,7 @@ function OverviewPage({ user, projects, dashboard }) {
                     <div style={{flex:1}}>
                       <div style={{fontSize:11,fontWeight:600,color:C.text}}>{m.label}</div>
                       <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
-                        <div style={{flex:1,height:4,background:"#F0F2F5",borderRadius:2}}><div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:m.color}}/></div>
+                        <div style={{flex:1,height:4,background:"#1E2128",borderRadius:2}}><div style={{width:`${pct}%`,height:"100%",borderRadius:2,background:m.color}}/></div>
                         <span style={{fontSize:10,fontWeight:700,color:m.color}}>{pct.toFixed(0)}%</span>
                       </div>
                     </div>
@@ -351,13 +351,13 @@ function ProjectsPage({ projects }) {
       <SectionCard title={`${sorted.length} projects`} subtitle="Click any row for detail">
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:1100}}>
-            <thead><tr style={{background:"#FAFBFC"}}>
+            <thead><tr style={{background:"#1A1D24"}}>
               {cols.map(c=>(<th key={c.key} onClick={()=>handleSort(c.key)} style={{padding:"10px 12px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:sortKey===c.key?C.teal:C.textLight,cursor:"pointer",textAlign:c.fmt?"right":"left",borderBottom:`2px solid ${sortKey===c.key?C.teal:"transparent"}`,whiteSpace:"nowrap"}}>{c.label} {sortKey===c.key?(sortDir==="asc"?"↑":"↓"):""}</th>))}
             </tr></thead>
             <tbody>
               {sorted.slice(0,100).map(p=>(<tr key={p.Id} onClick={()=>setSelectedId(selectedId===p.Id?null:p.Id)}
-                style={{borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer",background:selectedId===p.Id?"#F0F7FF":"transparent"}}
-                onMouseEnter={e=>{if(selectedId!==p.Id)e.currentTarget.style.background="#FAFBFC"}} onMouseLeave={e=>{if(selectedId!==p.Id)e.currentTarget.style.background="transparent"}}>
+                style={{borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer",background:selectedId===p.Id?"#1E2530":"transparent"}}
+                onMouseEnter={e=>{if(selectedId!==p.Id)e.currentTarget.style.background="#1A1D24"}} onMouseLeave={e=>{if(selectedId!==p.Id)e.currentTarget.style.background="transparent"}}>
                 <td style={{padding:"10px 12px",fontSize:12,fontWeight:600,color:C.teal}}>{p.ProjectNo}</td>
                 <td style={{padding:"10px 12px",fontSize:12,fontWeight:600,color:C.text,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.Name}</td>
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.CustomerName||"—"}</td>
@@ -370,7 +370,7 @@ function ProjectsPage({ projects }) {
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid,textAlign:"center"}}>{p.IsTM?"✓":"—"}</td>
               </tr>))}
               {/* Totals Row */}
-              <tr style={{background:"#F0F4F8",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
+              <tr style={{background:"#1E2128",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
                 <td style={{padding:"12px 12px",fontSize:12}} colSpan={4}>TOTAL ({sorted.length} projects)</td>
                 <td style={{padding:"12px 12px"}}></td>
                 <td style={{padding:"12px 12px",fontSize:12,textAlign:"right",color:C.navy}}>{fmt(sorted.reduce((s,p)=>s+(p.RevisedBudget||0),0))}</td>
@@ -384,7 +384,7 @@ function ProjectsPage({ projects }) {
         </div>
         {/* Detail Panel */}
         {detail && detail.project && (
-          <div style={{padding:"20px 22px",borderTop:`2px solid ${C.teal}`,background:"#F8FBFF"}}>
+          <div style={{padding:"20px 22px",borderTop:`2px solid ${C.teal}`,background:"#1A1D24"}}>
             <div style={{fontSize:14,fontWeight:700,color:C.navy,marginBottom:14}}>{detail.project.ProjectNo} · {detail.project.Name}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
               {/* Monthly Hours Chart */}
@@ -491,13 +491,13 @@ function TaskCodesPage({ tasks }) {
                     <div key={d.code+i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`}}>
                       <span style={{width:12,height:12,borderRadius:3,background:c,flexShrink:0}}/>
                       <div style={{flex:"0 0 180px",minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.code==="Other"?`Other (${others.length} codes)`:d.desc||d.code}</div><div style={{fontSize:10,color:C.textLight}}>Code: {d.code} · {d.projects} projects</div></div>
-                      <div style={{flex:1,height:8,background:"#F0F2F5",borderRadius:4,overflow:"hidden"}}><div style={{width:`${barW}%`,height:"100%",borderRadius:4,background:`linear-gradient(90deg, ${c}BB, ${c})`}}/></div>
+                      <div style={{flex:1,height:8,background:"#1E2128",borderRadius:4,overflow:"hidden"}}><div style={{width:`${barW}%`,height:"100%",borderRadius:4,background:`linear-gradient(90deg, ${c}BB, ${c})`}}/></div>
                       <div style={{textAlign:"right",minWidth:65}}><div style={{fontSize:13,fontWeight:700,color:C.navy}}>{fmt(d.value)}</div><div style={{fontSize:10,color:C.textLight}}>{pct.toFixed(1)}%</div></div>
                     </div>
                   );
                 })}
                 {others.length > 0 && (
-                  <div style={{marginTop:10,padding:"10px 14px",background:"#FAFBFC",borderRadius:8,border:`1px solid ${C.borderLight}`}}>
+                  <div style={{marginTop:10,padding:"10px 14px",background:"#1A1D24",borderRadius:8,border:`1px solid ${C.borderLight}`}}>
                     <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Other Breakdown ({others.length} codes)</div>
                     <div style={{maxHeight:100,overflowY:"auto"}}>
                       {others.map(t => (
@@ -518,7 +518,7 @@ function TaskCodesPage({ tasks }) {
 
       <SectionCard title="All Task Codes" subtitle="Sorted by actual spend · showing per-project averages and portfolio share">
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:"#FAFBFC"}}>{["","Code","Description","Projects","Actual Spend","Spend / Project","Share","Distribution"].map((h,i)=>(
+          <thead><tr style={{background:"#1A1D24"}}>{["","Code","Description","Projects","Actual Spend","Spend / Project","Share","Distribution"].map((h,i)=>(
             <th key={i} style={{padding:"10px 14px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:C.textLight,textAlign:i>=3?"right":"left",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
           ))}</tr></thead>
           <tbody>{sorted.filter(t=>(t.ActualCost||0)>0).map((t, i) => {
@@ -532,7 +532,7 @@ function TaskCodesPage({ tasks }) {
             const c = colors[i % colors.length];
             return (
             <tr key={t.Code+i} style={{borderBottom:`1px solid ${C.borderLight}`}}
-              onMouseEnter={e=>e.currentTarget.style.background="#FAFBFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              onMouseEnter={e=>e.currentTarget.style.background="#1A1D24"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
               <td style={{padding:"10px 10px",width:30}}><span style={{width:20,height:20,borderRadius:5,background:`${c}15`,color:c,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800}}>{i+1}</span></td>
               <td style={{padding:"10px 10px"}}><span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:700,background:C.teal,color:"#fff"}}>{t.Code}</span></td>
               <td style={{padding:"10px 14px",fontSize:12,fontWeight:600,color:C.text,maxWidth:250,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.Description||"—"}</td>
@@ -541,14 +541,14 @@ function TaskCodesPage({ tasks }) {
               <td style={{padding:"10px 14px",fontSize:12,fontWeight:600,color:C.teal,textAlign:"right"}}>{fmt(perProject)}</td>
               <td style={{padding:"10px 14px",fontSize:11,fontWeight:600,color:sharePct>10?C.teal:C.textLight,textAlign:"right"}}>{fmtPct(sharePct)}</td>
               <td style={{padding:"10px 14px",width:140}}>
-                <div style={{height:6,background:"#F0F2F5",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:6,background:"#1E2128",borderRadius:3,overflow:"hidden"}}>
                   <div style={{width:`${barW}%`,height:"100%",borderRadius:3,background:`linear-gradient(90deg, ${c}BB, ${c})`}}/>
                 </div>
               </td>
             </tr>);
           })}
           {/* Totals */}
-          <tr style={{background:"#F0F4F8",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
+          <tr style={{background:"#1E2128",fontWeight:700,borderTop:`2px solid ${C.border}`}}>
             <td colSpan={3} style={{padding:"12px 14px",fontSize:12}}>TOTAL ({withSpend.length} active codes)</td>
             <td style={{padding:"12px 14px",fontSize:12,textAlign:"right"}}>{totalProjects}</td>
             <td style={{padding:"12px 14px",fontSize:13,textAlign:"right",color:C.navy}}>{fmt(totalSpend)}</td>
@@ -625,7 +625,7 @@ function ForecastPage({ projects, monthly }) {
                     {label:"Avg/Month",value:fmtHrs(avgHours),color:"#737A82"},
                     {label:"Overtime %",value:fmtPct(otPct),sub:fmtHrs(totalOT)+" total",color:C.amber},
                   ].map((s,i)=>(
-                    <div key={i} style={{flex:1,padding:"8px 10px",background:"#FAFBFC",borderRadius:6,border:`1px solid ${C.borderLight}`}}>
+                    <div key={i} style={{flex:1,padding:"8px 10px",background:"#1A1D24",borderRadius:6,border:`1px solid ${C.borderLight}`}}>
                       <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:C.textLight}}>{s.label}</div>
                       <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:3}}>
                         <span style={{fontSize:15,fontWeight:800,color:C.navy}}>{s.value}</span>
@@ -690,7 +690,7 @@ function ForecastPage({ projects, monthly }) {
                     <div style={{fontSize:10,color:C.textLight}}>{c.count} projects</div>
                   </div>
                   <div style={{flex:1,height:20,position:"relative"}}>
-                    <div style={{position:"absolute",top:4,left:0,right:0,height:12,background:"#F0F2F5",borderRadius:6}}/>
+                    <div style={{position:"absolute",top:4,left:0,right:0,height:12,background:"#1E2128",borderRadius:6}}/>
                     <div style={{position:"absolute",top:4,left:0,height:12,width:`${pct}%`,background:`linear-gradient(90deg, ${color}CC, ${color})`,borderRadius:6,boxShadow:`0 2px 6px ${color}30`}}/>
                     {pct > 20 && <div style={{position:"absolute",top:5,left:`${Math.min(pct-2,95)}%`,transform:"translateX(-100%)",paddingRight:6,fontSize:9,fontWeight:700,color:"#fff"}}>{fmt(c.budget)}</div>}
                   </div>
@@ -714,15 +714,15 @@ function ForecastPage({ projects, monthly }) {
               const pct = (cost / maxCost) * 100;
               const isTop3 = i < 3;
               return (
-                <div key={p.Id} style={{padding:"12px 14px",borderRadius:8,border:`1px solid ${isTop3 ? C.teal+"40" : C.borderLight}`,background:isTop3?"#FFF8F5":"#FAFBFC"}}>
+                <div key={p.Id} style={{padding:"12px 14px",borderRadius:8,border:`1px solid ${isTop3 ? C.teal+"40" : C.borderLight}`,background:isTop3?"#2A1F18":"#1A1D24"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                    <span style={{width:22,height:22,borderRadius:6,background:isTop3?C.teal:"#E8ECF1",color:isTop3?"#fff":C.textMid,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{i+1}</span>
+                    <span style={{width:22,height:22,borderRadius:6,background:isTop3?C.teal:"#252830",color:isTop3?"#fff":C.textMid,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{i+1}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:600,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.Name}</div>
                       <div style={{fontSize:10,color:C.textLight}}>{p.CustomerName?.split(",")[0]||"—"} · {p.ProjectNo}</div>
                     </div>
                   </div>
-                  <div style={{height:6,background:"#E8ECF1",borderRadius:3,marginBottom:6}}>
+                  <div style={{height:6,background:"#252830",borderRadius:3,marginBottom:6}}>
                     <div style={{width:`${pct}%`,height:"100%",borderRadius:3,background:`linear-gradient(90deg, ${C.teal}AA, ${C.teal})`,transition:"width .4s"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
@@ -758,7 +758,7 @@ function HelpPage() {
       <SectionCard title="Frequently Asked Questions" subtitle={`${faqs.length} questions`}>
         {faqs.map((f,i)=>(<div key={i} style={{borderBottom:`1px solid ${C.borderLight}`}}>
           <div onClick={()=>setOpenFaq(openFaq===i?null:i)} style={{display:"flex",justifyContent:"space-between",padding:"14px 20px",cursor:"pointer"}}
-            onMouseEnter={e=>e.currentTarget.style.background="#FAFBFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            onMouseEnter={e=>e.currentTarget.style.background="#1A1D24"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
             <span style={{fontSize:13,fontWeight:600,color:C.text}}>{f.q}</span>
             <span style={{color:C.textLight,transform:openFaq===i?"rotate(180deg)":"none",transition:"transform .2s"}}>⌄</span>
           </div>

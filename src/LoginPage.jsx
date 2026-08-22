@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 const C = {
-  navy: "#1B2A4A",
-  navyLight: "#2C3E6B",
+  navy: "#0B0D0F",
+  navyLight: "#101B2A",
   accent: "#3B82F6",
   red: "#DC2626",
   slate: "#64748B",
@@ -46,7 +46,7 @@ export default function LoginPage({ onLogin }) {
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
       <div style={{
-        background: C.surface, borderRadius: 16, padding: "44px 40px 36px",
+        background: "#161920", borderRadius: 16, padding: "44px 40px 36px",
         width: 400, maxWidth: "90vw",
         boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
       }}>
@@ -60,14 +60,14 @@ export default function LoginPage({ onLogin }) {
             color: "#fff", fontWeight: 800, fontFamily: "'Georgia', serif",
             boxShadow: "0 4px 14px rgba(242,106,33,0.35)",
           }}>UCLA</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.navy }}>Project Financial Dashboard</div>
-          <div style={{ fontSize: 13, color: C.slate, marginTop: 4 }}>Sign in to continue</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#F0F1F3" }}>Project Financial Dashboard</div>
+          <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>Sign in to continue</div>
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* Username */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.slate, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>
               Username
             </label>
             <input
@@ -76,8 +76,8 @@ export default function LoginPage({ onLogin }) {
               autoComplete="username"
               style={{
                 width: "100%", padding: "10px 14px", fontSize: 14,
-                border: `1px solid ${C.border}`, borderRadius: 8,
-                outline: "none", color: C.navy, boxSizing: "border-box",
+                border: "1px solid #252830", borderRadius: 8,
+                outline: "none", color: "#F0F1F3", boxSizing: "border-box",
                 transition: "border .2s",
               }}
               onFocus={e => e.target.style.borderColor = C.accent}
@@ -87,7 +87,7 @@ export default function LoginPage({ onLogin }) {
 
           {/* Password */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.slate, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>
               Password
             </label>
             <input
@@ -96,8 +96,8 @@ export default function LoginPage({ onLogin }) {
               autoComplete="current-password"
               style={{
                 width: "100%", padding: "10px 14px", fontSize: 14,
-                border: `1px solid ${C.border}`, borderRadius: 8,
-                outline: "none", color: C.navy, boxSizing: "border-box",
+                border: "1px solid #252830", borderRadius: 8,
+                outline: "none", color: "#F0F1F3", boxSizing: "border-box",
                 transition: "border .2s",
               }}
               onFocus={e => e.target.style.borderColor = C.accent}
