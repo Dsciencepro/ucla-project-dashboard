@@ -95,7 +95,8 @@ function OverviewPage({ user, projects, dashboard }) {
   }, [projects, search]);
 
   const totalBudget = (projects||[]).reduce((s,p) => s + (p.RevisedBudget||0), 0);
-  const totalTaskBudget = (projects||[]).reduce((s,p) => s + (p.ActualCost||0), 0);
+  const totalActual = (projects||[]).reduce((s,p) => s + (p.ActualCost||0), 0);
+  const totalTaskBudget = totalActual;
   const totalHours = (projects||[]).reduce((s,p) => s + (p.HoursLogged||0), 0);
   const totalWO = (projects||[]).reduce((s,p) => s + (p.WorkOrderCount||0), 0);
   const completedWO = (projects||[]).reduce((s,p) => s + (p.CompletedWorkOrders||0), 0);
@@ -166,31 +167,47 @@ function OverviewPage({ user, projects, dashboard }) {
 
       {/* Two Column */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,marginBottom:22}}>
-        {/* Budget Performance List */}
-        <SectionCard title="Budget performance" subtitle="Top projects by actual spend">
-          <div style={{maxHeight:380,overflowY:"auto"}}>
-            {topProjects.map(p => {
-              const taskPct = (p.RevisedBudget||p.CostBudget||1) > 0 ? Math.min((p.ActualCost||0)/(p.RevisedBudget||p.CostBudget||1)*100, 100) : (p.ActualCost>0?50:0);
-              return (<div key={p.Id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer"}}
-                onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <div style={{flex:"0 0 260px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                    <span style={{fontSize:12,fontWeight:600,color:C.teal}}>{p.ProjectNo}</span>
-                    <StatusPill status={p.Status}/>
+        {/* Cost Distribution — shows each project's share of total spend */}
+        <SectionCard title="Cost Distribution" subtitle={`Top 8 projects represent ${totalActual>0?fmtPct(topProjects.reduce((s,p)=>s+(p.ActualCost||0),0)/totalActual*100):"—"} of total portfolio spend`}>
+          <div style={{maxHeight:400,overflowY:"auto"}}>
+            {topProjects.map((p, i) => {
+              const cost = p.ActualCost || 0;
+              const maxCost = topProjects[0]?.ActualCost || 1;
+              const barPct = (cost / maxCost) * 100;
+              const portfolioPct = totalActual > 0 ? (cost / totalActual * 100) : 0;
+              const hasWO = (p.WorkOrderCount || 0) > 0;
+              const hasHrs = (p.HoursLogged || 0) > 0;
+              const colors = [C.teal, C.teal, "#2D8EBB", "#2D8EBB", C.green, C.green, C.amber, C.amber];
+              const barColor = colors[i] || C.textLight;
+
+              return (<div key={p.Id} style={{padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`}}
+                onMouseEnter={e=>e.currentTarget.style.background="#FAFBFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+                    <span style={{width:22,height:22,borderRadius:6,background:`${barColor}15`,color:barColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}}>{i+1}</span>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.Name}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                        <span style={{fontSize:10,color:C.teal,fontWeight:600}}>{p.ProjectNo}</span>
+                        <StatusPill status={p.Status}/>
+                        {p.CustomerName && <span style={{fontSize:10,color:C.textLight}}>{p.CustomerName.split(",")[0]}</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:240}}>{p.Name}</div>
-                </div>
-                <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{flex:1,height:6,background:"#E8ECF1",borderRadius:3}}>
-                    <div style={{width:`${Math.min(taskPct,100)}%`,height:"100%",borderRadius:3,background:C.teal}}/>
+                  <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+                    <div style={{fontSize:18,fontWeight:800,color:C.navy}}>{fmt(cost)}</div>
+                    <div style={{fontSize:10,color:barColor,fontWeight:600}}>{fmtPct(portfolioPct)} of portfolio</div>
                   </div>
-                  <span style={{fontSize:11,color:C.textLight,minWidth:55}}>{fmtPct(taskPct)}</span>
                 </div>
-                <div style={{textAlign:"right",minWidth:80}}>
-                  <div style={{fontSize:15,fontWeight:700,color:C.navy}}>{fmt(p.ActualCost||p.RevisedBudget)}</div>
-                  <div style={{fontSize:10,color:C.textLight}}>{p.ProjectManager?.split(" ")[0]||""}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,height:8,background:"#F0F2F5",borderRadius:4,overflow:"hidden"}}>
+                    <div style={{width:`${barPct}%`,height:"100%",borderRadius:4,background:`linear-gradient(90deg, ${barColor}CC, ${barColor})`,transition:"width .4s"}}/>
+                  </div>
+                  <div style={{display:"flex",gap:8,fontSize:10,color:C.textLight,flexShrink:0}}>
+                    {hasWO && <span>{p.WorkOrderCount} WOs</span>}
+                    {hasHrs && <span>{fmtHrs(p.HoursLogged||0)}</span>}
+                  </div>
                 </div>
-                <span style={{color:C.textLight}}>›</span>
               </div>);
             })}
           </div>
