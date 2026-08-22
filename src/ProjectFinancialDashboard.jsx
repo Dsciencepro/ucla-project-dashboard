@@ -376,7 +376,7 @@ function ProjectsPage({ projects }) {
                 {detail.monthly?.length > 0 ? (
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={detail.monthly} margin={{top:5,right:10,left:-10,bottom:0}}>
-                      <XAxis dataKey="Month" style={{fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>v?.slice(5)||v}/>
+                      <XAxis dataKey="Month" style={{fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>{const p=v?.split("-")||[];const mn=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(p[1])||0]||p[1];return `${mn} ${p[0]||""}`;}} angle={-30} textAnchor="end" height={40}/>
                       <YAxis style={{fontSize:10}} axisLine={false} tickLine={false}/>
                       <Tooltip content={<ChartTooltip/>}/>
                       <Bar dataKey="Hours" fill={C.teal} radius={[4,4,0,0]} barSize={20} name="Hours"/>
@@ -553,7 +553,7 @@ function ForecastPage({ projects, monthly }) {
                 const parts = m.Month?.split("-")||[];
                 const yr = parts[0]?.slice(2)||"";
                 const mn = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])||0]||parts[1];
-                return {...m, label: `${mn} '${yr}`, regular: (m.TotalHours||0) - (m.OvertimeHours||0)};
+                return {...m, label: `${mn} ${parts[0]||""}`, regular: (m.TotalHours||0) - (m.OvertimeHours||0)};
               });
               const peakMonth = data.reduce((max, m) => (m.TotalHours||0) > (max.TotalHours||0) ? m : max, data[0]);
               const latestMonth = data[data.length - 1];
