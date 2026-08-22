@@ -94,8 +94,8 @@ function OverviewPage({ user, projects, dashboard }) {
     return p.slice(0, 12);
   }, [projects, search]);
 
-  const totalBudget = (projects||[]).reduce((s,p) => s + (p.Budget||0), 0);
-  const totalTaskBudget = (projects||[]).reduce((s,p) => s + (p.TaskBudget||0), 0);
+  const totalBudget = (projects||[]).reduce((s,p) => s + (p.RevisedBudget||0), 0);
+  const totalTaskBudget = (projects||[]).reduce((s,p) => s + (p.ActualCost||0), 0);
   const totalHours = (projects||[]).reduce((s,p) => s + (p.HoursLogged||0), 0);
   const totalWO = (projects||[]).reduce((s,p) => s + (p.WorkOrderCount||0), 0);
   const completedWO = (projects||[]).reduce((s,p) => s + (p.CompletedWorkOrders||0), 0);
@@ -108,7 +108,7 @@ function OverviewPage({ user, projects, dashboard }) {
   // By PM
   const byPM = useMemo(() => {
     const map = {};
-    (projects||[]).forEach(p => { const pm = p.ProjectManager||"Unassigned"; if(!map[pm]) map[pm]={name:pm,count:0,budget:0}; map[pm].count++; map[pm].budget+=(p.Budget||0); });
+    (projects||[]).forEach(p => { const pm = p.ProjectManager||"Unassigned"; if(!map[pm]) map[pm]={name:pm,count:0,budget:0}; map[pm].count++; map[pm].budget+=(p.RevisedBudget||0); });
     return Object.values(map).sort((a,b)=>b.count-a.count).slice(0,8);
   }, [projects]);
 
@@ -141,8 +141,8 @@ function OverviewPage({ user, projects, dashboard }) {
 
       {/* KPIs */}
       <div style={{display:"flex",gap:16,marginBottom:22}}>
-        <KpiCard label="Total Budgeted" value={fmt(totalBudget)} sub={`${(projects||[]).length} projects`} barPct={100} barColor={C.teal} icon="ℹ" />
-        <KpiCard label="Task-Level Budget" value={fmt(totalTaskBudget)} detail={`${fmtPct(totalBudget>0?totalTaskBudget/totalBudget*100:0)} detailed`} barPct={totalBudget>0?totalTaskBudget/totalBudget*100:0} barColor={C.green} icon="📊" />
+        <KpiCard label="Revised Budget" value={fmt(totalBudget)} sub={`${(projects||[]).length} projects`} barPct={100} barColor={C.teal} icon="ℹ" />
+        <KpiCard label="Actual Cost" value={fmt(totalTaskBudget)} detail={`${fmtPct(totalBudget>0?totalTaskBudget/totalBudget*100:0)} spent`} barPct={totalBudget>0?totalTaskBudget/totalBudget*100:0} barColor={C.green} icon="📊" />
         <KpiCard label="Hours Logged" value={fmtHrs(totalHours)} sub="all time" barPct={50} barColor={C.amber} icon="⏱" />
         <KpiCard label="Work Orders" value={totalWO.toLocaleString()} detail={`${completedWO.toLocaleString()} completed (${fmtPct(woPct)})`} barPct={woPct} barColor={C.teal} icon="◫" />
         <KpiCard label="Active Projects" value={activeCount} sub={`of ${(projects||[]).length}`} barPct={activeCount/(projects||[{length:1}]).length*100} barColor={C.green} icon="◉" />
@@ -164,7 +164,7 @@ function OverviewPage({ user, projects, dashboard }) {
         <SectionCard title="Budget performance" subtitle="Top projects by estimated budget">
           <div style={{maxHeight:380,overflowY:"auto"}}>
             {topProjects.map(p => {
-              const taskPct = p.Budget > 0 ? (p.TaskBudget||0)/p.Budget*100 : 0;
+              const taskPct = p.RevisedBudget > 0 ? (p.ActualCost||0)/p.RevisedBudget*100 : 0;
               return (<div key={p.Id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer"}}
                 onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{flex:"0 0 260px"}}>
@@ -181,7 +181,7 @@ function OverviewPage({ user, projects, dashboard }) {
                   <span style={{fontSize:11,color:C.textLight,minWidth:55}}>{fmtPct(taskPct)}</span>
                 </div>
                 <div style={{textAlign:"right",minWidth:80}}>
-                  <div style={{fontSize:15,fontWeight:700,color:C.navy}}>{fmt(p.Budget)}</div>
+                  <div style={{fontSize:15,fontWeight:700,color:C.navy}}>{fmt(p.RevisedBudget)}</div>
                   <div style={{fontSize:10,color:C.textLight}}>{p.ProjectManager?.split(" ")[0]||""}</div>
                 </div>
                 <span style={{color:C.textLight}}>›</span>
@@ -230,7 +230,7 @@ function OverviewPage({ user, projects, dashboard }) {
                 <span style={{fontWeight:600,color:C.teal,minWidth:75}}>{p.ProjectNo}</span>
                 <span style={{flex:1,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.Name}</span>
                 <StatusPill status={p.Status}/>
-                <span style={{fontWeight:700,color:C.navy,minWidth:70,textAlign:"right"}}>{fmt(p.Budget)}</span>
+                <span style={{fontWeight:700,color:C.navy,minWidth:70,textAlign:"right"}}>{fmt(p.RevisedBudget)}</span>
               </div>
             ))}
           </div>
@@ -268,7 +268,7 @@ function ProjectsPage({ projects }) {
   const cols = [
     {key:"ProjectNo",label:"Project #",w:95},{key:"Name",label:"Project Name",w:220},{key:"CustomerName",label:"Client",w:160},
     {key:"ProjectManager",label:"PM",w:110},{key:"Status",label:"Status",w:90},{key:"Budget",label:"Budget",w:90,fmt:fmt},
-    {key:"TaskBudget",label:"Task Budget",w:90,fmt:fmt},{key:"HoursLogged",label:"Hours",w:70,fmt:v=>fmtHrs(v||0)},
+    {key:"TaskBudget",label:"Actual Cost",w:90,fmt:fmt},{key:"HoursLogged",label:"Hours",w:70,fmt:v=>fmtHrs(v||0)},
     {key:"WorkOrderCount",label:"WOs",w:50},{key:"IsTM",label:"T&M",w:45},
   ];
 
@@ -299,8 +299,8 @@ function ProjectsPage({ projects }) {
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.CustomerName||"—"}</td>
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid}}>{p.ProjectManager||"—"}</td>
                 <td style={{padding:"10px 12px"}}><StatusPill status={p.Status}/></td>
-                <td style={{padding:"10px 12px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(p.Budget||0)}</td>
-                <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,textAlign:"right"}}>{fmt(p.TaskBudget||0)}</td>
+                <td style={{padding:"10px 12px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(p.RevisedBudget||0)}</td>
+                <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,textAlign:"right"}}>{fmt(p.ActualCost||0)}</td>
                 <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,textAlign:"right"}}>{fmtHrs(p.HoursLogged||0)}</td>
                 <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,textAlign:"center"}}>{p.WorkOrderCount||0}</td>
                 <td style={{padding:"10px 12px",fontSize:11,color:C.textMid,textAlign:"center"}}>{p.IsTM?"✓":"—"}</td>
@@ -429,20 +429,20 @@ function TaskCodesPage({ tasks }) {
 // FORECAST PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function ForecastPage({ projects, monthly }) {
-  const totalBudget = (projects||[]).reduce((s,p) => s + (p.Budget||0), 0);
-  const totalTask = (projects||[]).reduce((s,p) => s + (p.TaskBudget||0), 0);
+  const totalBudget = (projects||[]).reduce((s,p) => s + (p.RevisedBudget||0), 0);
+  const totalTask = (projects||[]).reduce((s,p) => s + (p.ActualCost||0), 0);
   const topByBudget = [...(projects||[])].sort((a,b)=>(b.Budget||0)-(a.Budget||0)).slice(0,20);
 
   // Scatter: budget vs hours
-  const scatter = topByBudget.filter(p=>p.Budget>0).map(p=>({
+  const scatter = topByBudget.filter(p=>p.RevisedBudget>0).map(p=>({
     name: p.Name?.length>20?p.Name.slice(0,18)+"…":p.Name,
-    x: p.Budget, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
+    x: p.RevisedBudget, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
   }));
 
   // By customer
   const byCust = useMemo(() => {
     const map = {};
-    (projects||[]).forEach(p => { const c = p.CustomerName||"Unknown"; if(!map[c]) map[c]={name:c,budget:0,count:0}; map[c].budget+=(p.Budget||0); map[c].count++; });
+    (projects||[]).forEach(p => { const c = p.CustomerName||"Unknown"; if(!map[c]) map[c]={name:c,budget:0,count:0}; map[c].budget+=(p.RevisedBudget||0); map[c].count++; });
     return Object.values(map).sort((a,b)=>b.budget-a.budget).slice(0,10);
   }, [projects]);
 
@@ -454,7 +454,7 @@ function ForecastPage({ projects, monthly }) {
       <div style={{display:"flex",gap:16,marginBottom:22}}>
         <KpiCard label="Total Portfolio Budget" value={fmt(totalBudget)} icon="📋" barPct={100} barColor={C.teal}/>
         <KpiCard label="Detailed (Task-Level)" value={fmt(totalTask)} detail={`${fmtPct(totalBudget>0?totalTask/totalBudget*100:0)} coverage`} barPct={totalBudget>0?totalTask/totalBudget*100:0} barColor={C.green} icon="📊"/>
-        <KpiCard label="Undetailed Gap" value={fmt(totalBudget-totalTask)} icon="⚠️" barPct={(totalBudget-totalTask)/totalBudget*100} barColor={C.amber}/>
+        <KpiCard label="Unspent Gap" value={fmt(totalBudget-totalTask)} icon="⚠️" barPct={(totalBudget-totalTask)/totalBudget*100} barColor={C.amber}/>
         <KpiCard label="Top Client Budget" value={fmt(byCust[0]?.budget||0)} sub={byCust[0]?.name?.split(",")[0]||""} icon="👤" barPct={80} barColor={C.purple}/>
       </div>
 
@@ -525,7 +525,7 @@ function HelpPage() {
     {q:"Where does the data come from?",a:"All data is pulled live from the FAST SQL Server database (Acumatica ERP). Projects come from ACUM_Project, budgets from ACUM_ProjectTaskItems, hours from EmployeeTimesheets, and work orders from the WorkOrders table."},
     {q:"How often does data refresh?",a:"Data refreshes every time you load a page. The FAST database is always live — there's no caching delay."},
     {q:"What does each status mean?",a:"A = Active, Awarded = Contract won but not started, In Planning = Pre-construction phase, F = Finished, L = Closed."},
-    {q:"How is Task Budget calculated?",a:"Task Budget = SUM(BasePrice × Quantity) from ACUM_ProjectTaskItems, grouped by project. This is the detailed line-item budget from task codes."},
+    {q:"How is Actual Cost calculated?",a:"Actual Cost = SUM(BasePrice × Quantity) from ACUM_ProjectTaskItems, grouped by project. This is the spent line-item budget from task codes."},
     {q:"Why are hours zero for some projects?",a:"Hours come from EmployeeTimesheets linked through WorkOrders. Newer projects may not have work orders or timesheets yet."},
     {q:"Who do I contact for issues?",a:"For data issues contact Jignesh (jigssodvadiya@gmail.com). For dashboard issues contact Ashish (ashishmishra1981@gmail.com)."},
   ];
