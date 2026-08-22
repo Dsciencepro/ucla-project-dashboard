@@ -164,7 +164,7 @@ function OverviewPage({ user, projects, dashboard }) {
         <SectionCard title="Budget performance" subtitle="Top projects by estimated budget">
           <div style={{maxHeight:380,overflowY:"auto"}}>
             {topProjects.map(p => {
-              const taskPct = p.RevisedBudget > 0 ? (p.ActualCost||0)/p.RevisedBudget*100 : 0;
+              const taskPct = (p.RevisedBudget||p.CostBudget||1) > 0 ? (p.ActualCost||0)/(p.RevisedBudget||p.CostBudget||1)*100 : (p.ActualCost>0?50:0);
               return (<div key={p.Id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,cursor:"pointer"}}
                 onMouseEnter={e=>e.currentTarget.style.background="#F8FAFC"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{flex:"0 0 260px"}}>
@@ -359,9 +359,9 @@ function ProjectsPage({ projects }) {
 // TASK CODES PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function TaskCodesPage({ tasks }) {
-  const totalBudget = (tasks||[]).reduce((s,t) => s + (t.CostBudget||0), 0);
+  const totalBudget = (tasks||[]).reduce((s,t) => s + (t.ActualCost||0), 0);
   const totalProjects = (tasks||[]).reduce((s,t) => s + (t.ProjectCount||0), 0);
-  const pieData = (tasks||[]).filter(t=>t.CostBudget>0).map(t=>({name:`${t.Code} ${(t.Description||"").split(" ")[0]}`,value:t.CostBudget}));
+  const pieData = (tasks||[]).filter(t=>t.ActualCost>0).map(t=>({name:`${t.Code} ${(t.Description||"").split(" ")[0]}`,value:t.ActualCost}));
 
   return (
     <div>
@@ -370,12 +370,12 @@ function TaskCodesPage({ tasks }) {
 
       <div style={{display:"flex",gap:16,marginBottom:22}}>
         <KpiCard label="Total Task Codes" value={(tasks||[]).length} icon="▤" barPct={100} barColor={C.teal}/>
-        <KpiCard label="Total Budget" value={fmt(totalBudget)} icon="💰" barPct={100} barColor={C.green}/>
+        <KpiCard label="Actual Spend" value={fmt(totalBudget)} icon="💰" barPct={100} barColor={C.green}/>
         <KpiCard label="Project Assignments" value={totalProjects} icon="◫" barPct={70} barColor={C.amber}/>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:22}}>
-        <SectionCard title="Budget by Task Code" subtitle="Dollar allocation across codes">
+        <SectionCard title="Budget by Task Code" subtitle="Actual spend across task codes">
           <div style={{padding:16}}>
             <ResponsiveContainer width="100%" height={240}>
               <PieChart margin={{top:10,bottom:5}}>
@@ -390,14 +390,14 @@ function TaskCodesPage({ tasks }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Budget by Code" subtitle="Top codes by budget allocation">
+        <SectionCard title="Budget by Code" subtitle="Top codes by actual spend">
           <div style={{padding:16}}>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={(tasks||[]).filter(t=>t.CostBudget>0).sort((a,b)=>(b.TotalBudget||0)-(a.TotalBudget||0)).slice(0,10)} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
+              <BarChart data={(tasks||[]).filter(t=>t.ActualCost>0).sort((a,b)=>(b.ActualCost||0)-(a.ActualCost||0)).slice(0,10)} layout="vertical" margin={{top:5,right:20,left:5,bottom:0}}>
                 <XAxis type="number" tickFormatter={v=>fmt(v)} style={{fontSize:9}} axisLine={false} tickLine={false}/>
                 <YAxis type="category" dataKey="Code" style={{fontSize:10}} axisLine={false} tickLine={false} width={50}/>
                 <Tooltip content={<ChartTooltip/>}/>
-                <Bar dataKey="TotalBudget" fill={C.teal} radius={[0,4,4,0]} barSize={14} name="Budget"/>
+                <Bar dataKey="ActualCost" fill={C.teal} radius={[0,4,4,0]} barSize={14} name="Budget"/>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -406,7 +406,7 @@ function TaskCodesPage({ tasks }) {
 
       <SectionCard title="All Task Codes" subtitle="From FAST database TaskCodes + ACUM_ProjectTask">
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:"#FAFBFC"}}>{["Code","Description","Projects","Assignments","Total Budget","Qty"].map((h,i)=>(
+          <thead><tr style={{background:"#FAFBFC"}}>{["Code","Description","Projects","Assignments","Actual Spend","Qty"].map((h,i)=>(
             <th key={i} style={{padding:"10px 16px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,color:C.textLight,textAlign:i>1?"right":"left",borderBottom:`1px solid ${C.border}`}}>{h}</th>
           ))}</tr></thead>
           <tbody>{(tasks||[]).map(t=>(
@@ -415,7 +415,7 @@ function TaskCodesPage({ tasks }) {
               <td style={{padding:"12px 16px",fontSize:13,fontWeight:600,color:C.text}}>{t.Description||"—"}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.ProjectCount||0}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{t.TaskAssignments||0}</td>
-              <td style={{padding:"12px 16px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(t.CostBudget||0)}</td>
+              <td style={{padding:"12px 16px",fontSize:12,fontWeight:600,color:C.navy,textAlign:"right"}}>{fmt(t.ActualCost||0)}</td>
               <td style={{padding:"12px 16px",fontSize:12,color:C.textMid,textAlign:"right"}}>{Math.round(t.TotalQuantity||0).toLocaleString()}</td>
             </tr>
           ))}</tbody>
@@ -434,15 +434,15 @@ function ForecastPage({ projects, monthly }) {
   const topByBudget = [...(projects||[])].sort((a,b)=>(b.Budget||0)-(a.Budget||0)).slice(0,20);
 
   // Scatter: budget vs hours
-  const scatter = topByBudget.filter(p=>p.RevisedBudget>0).map(p=>({
+  const scatter = topByBudget.filter(p=>((p.RevisedBudget||0)>0||(p.ActualCost||0)>0)).map(p=>({
     name: p.Name?.length>20?p.Name.slice(0,18)+"…":p.Name,
-    x: p.RevisedBudget, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
+    x: p.RevisedBudget||p.ActualCost||0, y: p.HoursLogged||0, z: p.WorkOrderCount||1, status: p.Status,
   }));
 
   // By customer
   const byCust = useMemo(() => {
     const map = {};
-    (projects||[]).forEach(p => { const c = p.CustomerName||"Unknown"; if(!map[c]) map[c]={name:c,budget:0,count:0}; map[c].budget+=(p.RevisedBudget||0); map[c].count++; });
+    (projects||[]).forEach(p => { const c = p.CustomerName||"Unknown"; if(!map[c]) map[c]={name:c,budget:0,count:0}; map[c].budget+=(p.RevisedBudget||p.ActualCost||0); map[c].count++; });
     return Object.values(map).sort((a,b)=>b.budget-a.budget).slice(0,10);
   }, [projects]);
 
